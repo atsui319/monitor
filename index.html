@@ -120,7 +120,7 @@
         anime: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTBRf9k4zS7Ht5s7GKejqT2d-cyWbDHd19DwTPmAzoHe40d9nV1cVu-RH565sIq9GbYmEKkzhpBytp/pub?output=csv",
         social: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTXVYOqHu_0VRIkiVK0RQO-ZWPZ6pHGqIw5VxBWdOlg3-HbP3q26gM0fVxTndREhjqbaxFzcjeuoMcE/pub?output=csv",
         life: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSTr7JL0lBCMLRBFi-CraPlJxzp4xrGD8RSnc8MSuoV3ORISo0iCFWMmI_FCtDlgkxwPqmv_TwAvufn/pub?output=csv",
-        sport: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSJYls3O8_98SKNWqx34c0V5HLIaXdxxA8v4E3c1iwrTFZBL1TSxzeem9AbKZKYfMkQEcu7bECcsgVo/pub?output=csv"
+        sport: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSJYls3O8_98SKNWqx34c0V5HLIaXdxxA8v4E3c1iwrTFZBL1TSzeem9AbKZKYfMkQEcu7bECcsgVo/pub?output=csv"
     };
 
     let masterData = { anime: [], social: [], life: [], sport: [], custom: [], all: [] };
@@ -174,6 +174,7 @@
     function applyQuiz(obj) {
         stopQuiz(); currentQuiz = obj; revealedIndexes = [];
         usedQuizzes.add(obj.q);
+        // 新しい問題に移るタイミングで全プレイヤーの状態をidleに戻す
         db.ref().update({ status: "idle", winner: "" });
         document.getElementById("adminAnswer").innerText = obj.a;
         document.getElementById("adminFullText").innerText = obj.q;
@@ -224,8 +225,9 @@
                 subWindow.showFlash("❌","#e74c3c",'wrong');
                 subWindow.resetForNext(); 
             }
-            // 誤答時、設定された回数分「休み」を付与
+            // 誤答時：設定された回数（デフォルト1回など）を休みとして登録
             db.ref("waits/"+currentWinner).set(waitCount);
+            // 状態をactiveに戻して読み上げを続行可能にする
             db.ref().update({winner:"", status:"active"});
         }
     }
@@ -240,7 +242,7 @@
     function addCustomQuiz() { const q = document.getElementById("customQ").value, a = document.getElementById("customA").value; if(q && a) { masterData.custom.unshift({q, a}); changeGenre('custom'); } }
     function resetAllScores() { if(confirm("初期化しますか？")){ db.ref("scores").remove(); db.ref("waits").remove(); usedQuizzes.clear(); renderList(); } }
     
-    // 次の問題に進む（idle状態になる）タイミングで休みを1減らす
+    // 【最重要】次の問題に進む際、1回分休みを消費させるロジック
     function reduceWaits() { 
         db.ref("waits").once("value", snap => { 
             const w = snap.val() || {}; 
@@ -253,7 +255,7 @@
             const d = snap.val() || {}; currentWinner = d.winner || "";
             document.getElementById("activePlayer").innerText = currentWinner || "---";
             if(d.status === "pushed" && lastStatus !== "pushed") { stopQuiz(); if(subWindow) subWindow.showWinner(currentWinner); }
-            // 状態が idle（次の問題待ち）に変わった瞬間にペナルティカウントを消化
+            // ステータスがidle（問題の切り替え時）になったらペナルティを消化
             if(d.status === "idle" && lastStatus !== "idle") reduceWaits();
             lastStatus = d.status;
         });
