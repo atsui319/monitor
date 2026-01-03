@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Final Complete</title>
+    <title>QuizConsole Pro - Random & Full Complete</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -21,6 +21,7 @@
         .search-box { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid var(--primary); border-radius: 8px; margin-bottom: 10px; font-size: 1rem; }
         .quiz-item { padding: 8px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.85rem; }
         .quiz-item:hover { background: #e3f2fd; }
+        .quiz-item.used { opacity: 0.5; background: #f9f9f9; }
         .score-input { width: 45px; text-align: center; font-weight: bold; }
         #remote-button { width: 280px; height: 280px; border-radius: 50%; border: 15px solid #bdc3c7; background: #ecf0f1; font-size: 3.5rem; margin: 20px auto; display: none; cursor: pointer; }
         #remote-button.active { border-color: #e74c3c; background: #ff4757; color: white; box-shadow: 0 10px 0 #c0392b; }
@@ -49,11 +50,6 @@
             </div>
             <button style="width:100%; height:45px; background:#95a5a6; color:white; border-radius:8px; margin-bottom:8px;" onclick="resumeQuiz()">読上再開 / スルー</button>
             <button style="width:100%; height:45px; background:var(--warn); color:white; border-radius:8px;" onclick="revealAnswerToSub()">📢 答えを公開</button>
-            <div style="margin-top:10px; font-size:0.8rem; display:flex; justify-content:center; gap:10px;">
-                <label>正解:+<input type="number" id="plusPts" value="1" style="width:35px;"></label>
-                <label>誤答:<input type="number" id="minusPts" value="-1" style="width:35px;"></label>
-                <label>休み:<input type="number" id="missWait" value="1" style="width:35px;">回</label>
-            </div>
         </div>
 
         <div class="panel">
@@ -75,8 +71,11 @@
             <small>【全文】</small> <span id="adminFullText" style="font-size:0.8rem;">-</span>
         </div>
         <div class="panel">
-            速度: <input type="range" id="speedRange" min="50" max="600" step="10" value="150" oninput="updateSpeed(this.value)">
-            <button style="background:var(--primary); color:white; width:100%; height:50px; border-radius:8px;" onclick="startQuiz()">読上開始</button>
+            <button style="background:var(--test); color:white; width:100%; height:45px; border-radius:8px; margin-bottom:10px; cursor:pointer;" onclick="pickRandomQuiz()">🎲 次の問題をランダム抽選</button>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                速度: <input type="range" id="speedRange" min="50" max="600" step="10" value="150" oninput="updateSpeed(this.value)" style="flex:1;">
+            </div>
+            <button style="background:var(--primary); color:white; width:100%; height:55px; border-radius:8px; font-size:1.2rem;" onclick="startQuiz()">読上開始</button>
         </div>
     </div>
 
@@ -90,7 +89,7 @@
             <button class="btn-genre" id="btn-sport" onclick="changeGenre('sport')">スポ</button>
             <button class="btn-genre" id="btn-custom" onclick="changeGenre('custom')">★</button>
         </div>
-        <input type="text" id="quizSearch" class="search-box" placeholder="🔍 検索..." oninput="renderList()">
+        <input type="text" id="quizSearch" class="search-box" placeholder="🔍 問題を検索..." oninput="renderList()">
         <div id="quizList" style="max-height: 400px; overflow-y: auto; border: 1px solid #eee;"></div>
         <div class="panel" style="margin-top:10px;">
             <small>手動追加</small><br>
@@ -122,7 +121,7 @@
     };
 
     let masterData = { anime: [], social: [], life: [], sport: [], custom: [], all: [] };
-    let currentQuiz = { q: "", a: "" }, revealedIndexes = [];
+    let usedQuizzes = new Set(), currentQuiz = { q: "", a: "" }, revealedIndexes = [];
     let isRunning = false, timer = null, subWindow = null, currentWinner = "", lastStatus = "idle", currentGenre = 'all', intervalTime = 150;
 
     async function initRole(role) {
@@ -143,21 +142,45 @@
         } else { setupPlayer(); }
     }
 
-    function changeGenre(g) { currentGenre = g; document.querySelectorAll('.btn-genre').forEach(b => b.classList.remove('active')); if(document.getElementById('btn-'+g)) document.getElementById('btn-'+g).classList.add('active'); renderList(); }
+    function changeGenre(g) { 
+        currentGenre = g; 
+        document.querySelectorAll('.btn-genre').forEach(b => b.classList.remove('active')); 
+        if(document.getElementById('btn-'+g)) document.getElementById('btn-'+g).classList.add('active'); 
+        // ジャンル切り替え時にシャッフル
+        if(masterData[g]) masterData[g].sort(() => Math.random() - 0.5);
+        renderList(); 
+    }
+
     function renderList() {
         const keyword = document.getElementById("quizSearch").value.toLowerCase();
         let pool = masterData[currentGenre] || [];
         if(keyword) pool = pool.filter(i => i.q.includes(keyword) || i.a.includes(keyword));
-        document.getElementById("quizList").innerHTML = pool.map(i => `<div class="quiz-item" onclick="applyQuiz({q:'${i.q.replace(/'/g,"\\'")}', a:'${i.a.replace(/'/g,"\\'")}'})"><strong>${i.a}</strong><br><small>${i.q}</small></div>`).join("");
+        document.getElementById("quizList").innerHTML = pool.map(i => {
+            const isUsed = usedQuizzes.has(i.q);
+            return `<div class="quiz-item ${isUsed?'used':''}" onclick="applyQuiz({q:'${i.q.replace(/'/g,"\\'")}', a:'${i.a.replace(/'/g,"\\'")}'})">
+                <strong>${i.a}</strong><br><small>${i.q}</small>
+            </div>`
+        }).join("");
+    }
+
+    function pickRandomQuiz() {
+        const keyword = document.getElementById("quizSearch").value.toLowerCase();
+        let pool = (masterData[currentGenre] || []).filter(i => !usedQuizzes.has(i.q));
+        if(keyword) pool = pool.filter(i => i.q.includes(keyword) || i.a.includes(keyword));
+        if(pool.length === 0) { alert("このジャンルの未出題問題がありません！"); return; }
+        const selected = pool[Math.floor(Math.random() * pool.length)];
+        applyQuiz(selected);
     }
 
     function applyQuiz(obj) {
         stopQuiz(); currentQuiz = obj; revealedIndexes = [];
+        usedQuizzes.add(obj.q);
         db.ref().update({ status: "idle", winner: "" });
         document.getElementById("adminAnswer").innerText = obj.a;
         document.getElementById("adminFullText").innerText = obj.q;
         if (subWindow && !subWindow.closed) subWindow.resetForNext();
         syncDisplay();
+        renderList(); // 使用済みを薄くするために再描画
     }
 
     function syncDisplay() {
@@ -184,14 +207,13 @@
 
     function manualJudge(isCorrect) {
         if(!currentWinner) return;
-        const p = parseInt(document.getElementById("plusPts").value), m = parseInt(document.getElementById("minusPts").value);
-        db.ref("scores/" + currentWinner).transaction(s => (s || 0) + (isCorrect ? p : m));
+        db.ref("scores/" + currentWinner).transaction(s => (s || 0) + (isCorrect ? 1 : -1));
         if (isCorrect) {
             if(subWindow) subWindow.showResult(currentWinner+" 正解！","#2ecc71",'correct');
             db.ref("waits/"+currentWinner).set(0); db.ref().update({status:"idle",winner:""}); stopQuiz();
         } else {
             if(subWindow) subWindow.showFlash("❌","#e74c3c",'wrong');
-            db.ref("waits/"+currentWinner).set(parseInt(document.getElementById("missWait").value));
+            db.ref("waits/"+currentWinner).set(1);
             db.ref().update({winner:"",status:"active"});
         }
     }
@@ -204,7 +226,7 @@
 
     function openAllCharacters() { revealedIndexes = Array.from(currentQuiz.q).map((_,i)=>i); syncDisplay(); db.ref("status").set("active"); }
     function addCustomQuiz() { const q = document.getElementById("customQ").value, a = document.getElementById("customA").value; if(q && a) { masterData.custom.unshift({q, a}); changeGenre('custom'); } }
-    function resetAllScores() { if(confirm("全リセット？")){ db.ref("scores").remove(); db.ref("waits").remove(); } }
+    function resetAllScores() { if(confirm("スコアと既出情報をリセット？")){ db.ref("scores").remove(); db.ref("waits").remove(); usedQuizzes.clear(); renderList(); } }
     function reduceWaits() { db.ref("waits").once("value", snap => { const w = snap.val() || {}; for(let u in w) if(w[u]>0) db.ref("waits/"+u).set(w[u]-1); }); }
 
     function setupAdminFirebase() {
