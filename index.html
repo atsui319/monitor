@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Complete Master</title>
+    <title>QuizConsole Pro - Grand Finale</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -25,7 +25,6 @@
         .admin-preview .ans-label { color: #e74c3c; font-weight: bold; font-size: 1.2rem; }
         .admin-preview .q-label { color: #666; margin-top: 5px; display: block; line-height: 1.4; font-size: 0.9rem; }
 
-        /* ヒントモードUI */
         .hint-mode-box { background: #fff5f5; border: 2px solid var(--danger); padding: 10px; border-radius: 10px; margin-bottom: 15px; }
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; vertical-align: middle; margin-right: 8px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -61,7 +60,10 @@
 
 <div id="admin-ui" class="main-layout" style="display:none;">
     <div class="container">
-        <button class="btn-primary" style="background:#8e44ad; width:100%; margin-bottom:15px;" onclick="openSubWindow()">💻 視聴者用画面を開く</button>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <button class="btn-primary" style="background:#8e44ad; flex:3;" onclick="openSubWindow()">💻 視聴者用画面を開く</button>
+            <button class="btn-primary" style="background:#f39c12; flex:2;" onclick="announceResults()">🏆 結果発表</button>
+        </div>
         
         <div class="judge-controls">
             <button class="btn-ok" onclick="manualJudge(true)">⭕ 正解</button>
@@ -93,7 +95,7 @@
             <small id="adminFullText" class="q-label">問題を選択してください</small>
         </div>
 
-        <div id="display">（問題表示エリア）</div>
+        <div id="display">（問題表示）</div>
 
         <div class="score-board">
             <strong>📊 リアルタイムスコア</strong>
@@ -146,6 +148,7 @@
     };
 
     let masterData = { anime: [], social: [], life: [], sport: [], custom: [] };
+    let currentScores = {};
     let usedQuizzes = new Set(JSON.parse(localStorage.getItem('quiz_history') || "[]"));
     let currentQuiz = { q: "", a: "" }, revealedIndexes = [];
     let isRunning = false, timer = null, limitTimer = null, subWindow = null;
@@ -158,7 +161,7 @@
             const keys = Object.keys(URLS);
             const res = await Promise.all(Object.values(URLS).map(url => fetch(url).then(r => r.text())));
             keys.forEach((key, i) => { masterData[key] = parseCSV(res[i]); });
-            db.ref("scores").on("value", snap => updateScoreDisplay(snap.val()));
+            db.ref("scores").on("value", snap => { currentScores = snap.val() || {}; updateScoreDisplay(currentScores); });
             db.ref("winner").on("value", snap => { currentWinner = snap.val(); if (subWindow && currentWinner) subWindow.showWinner(currentWinner); });
             db.ref("status").on("value", snap => { if (snap.val() === "pushed") { stopQuiz(); startLimitCounter(); } });
             changeGenre('all');
@@ -168,12 +171,20 @@
     function parseCSV(t) { return t.split(/\r?\n/).slice(1).filter(r => r.trim() !== "").map(row => { const p = row.split(","); return { q: p[0] || "", a: p[1] || "" }; }); }
 
     function updateScoreDisplay(scores) {
-        if (!scores) return document.getElementById("adminScoreList").innerHTML = "参加者なし";
         let html = "";
         for (let name in scores) {
             html += `<div class="score-row"><span>${name}</span><span><span style="color:green;">${scores[name].correct || 0} AC</span> / <span style="color:red;">${scores[name].wrong || 0} WA</span></span></div>`;
         }
-        document.getElementById("adminScoreList").innerHTML = html;
+        document.getElementById("adminScoreList").innerHTML = html || "参加者なし";
+    }
+
+    function announceResults() {
+        if (!subWindow || subWindow.closed) return alert("視聴者用画面を開いてください");
+        const sorted = Object.entries(currentScores)
+            .map(([name, val]) => ({ name, score: (val.correct || 0) }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3);
+        subWindow.showFinalResults(sorted);
     }
 
     function changeGenre(g) { currentGenre = g; document.querySelectorAll('.btn-genre').forEach(b => b.classList.remove('active')); document.getElementById('g-' + g).classList.add('active'); refreshCandidateList(); }
@@ -181,7 +192,7 @@
     function refreshCandidateList() {
         let pool = currentGenre === 'all' ? Object.values(masterData).flat() : masterData[currentGenre];
         let available = pool.filter(item => !usedQuizzes.has(item.q));
-        if (currentGenre === 'all' || currentGenre !== 'custom') { available.sort(() => Math.random() - 0.5); }
+        if (currentGenre !== 'custom') available.sort(() => Math.random() - 0.5);
         document.getElementById("quizList").innerHTML = available.slice(0, 50).map(item => `
             <div class="quiz-item" style="padding:10px; border-bottom:1px solid #eee; cursor:pointer; background:#fff;" 
                  onclick="applyQuiz({q:'${item.q.replace(/'/g,"\\'")}', a:'${item.a.replace(/'/g,"\\'")}'})">
@@ -192,7 +203,7 @@
 
     function addCustomQuiz() {
         const q = document.getElementById("customQ").value.trim(), a = document.getElementById("customA").value.trim();
-        if (!q || !a) return alert("問題と答えを入力してください");
+        if (!q || !a) return alert("入力してください");
         masterData.custom.unshift({ q, a });
         document.getElementById("customQ").value = ""; document.getElementById("customA").value = "";
         changeGenre('custom');
@@ -267,7 +278,7 @@
 
     function openSubWindow() {
         subWindow = window.open("", "QuizSub", "width=1200,height=800");
-        subWindow.document.write(`<html><head><style>body { background:#000; color:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family: "Meiryo", sans-serif; margin:0; overflow:hidden; } #text { font-size:4rem; width:90%; line-height:1.6; display:flex; flex-wrap:wrap; justify-content:center; } #text span { display:inline-block; min-width:1.1em; text-align:center; } #text span.hidden { visibility:hidden; } .banner { position:fixed; top:0; left:0; width:100%; background:#c0392b; color:#f1c40f; font-size:4rem; text-align:center; padding:20px; z-index:99; } .ans-box { font-size: 6rem; border: 10px solid #f1c40f; padding: 20px; border-radius: 20px; margin-top: 30px; }</style></head><body><div id="winner-display" style="display:none;"></div><div id="text"></div><div id="res-container" style="display:none; text-align:center;"><div id="res-msg" style="font-size:3rem;"></div><div id="res-ans" class="ans-box"></div></div><script>window.showWinner=(n)=>{const el=document.getElementById('winner-display'); el.innerHTML='<div class="banner">'+n+' 解答中...</div>'; el.style.display='block';}; window.showResult=(m,c,a)=>{document.getElementById('winner-display').style.display='none'; document.getElementById('res-msg').innerText=m; document.getElementById('res-msg').style.color=c; document.getElementById('res-ans').innerText=a; document.getElementById('res-container').style.display='block';}; window.showFlash=(m,c)=>{const div=document.createElement("div"); div.innerText=m; div.style.cssText="position:fixed; top:40%; left:50%; transform:translateX(-50%); font-size:10rem; color:"+c+"; font-weight:bold; z-index:100;"; document.body.appendChild(div); setTimeout(()=>div.remove(), 2000);}; window.resetForNext=()=>{document.getElementById('text').style.display='flex'; document.getElementById('res-container').style.display='none'; document.getElementById('winner-display').style.display='none';};<\/script></body></html>`);
+        subWindow.document.write(`<html><head><style>body { background:#000; color:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family: "Meiryo", sans-serif; margin:0; overflow:hidden; } #text { font-size:4rem; width:90%; line-height:1.6; display:flex; flex-wrap:wrap; justify-content:center; } #text span { display:inline-block; min-width:1.1em; text-align:center; } #text span.hidden { visibility:hidden; } .banner { position:fixed; top:0; left:0; width:100%; background:#c0392b; color:#f1c40f; font-size:4rem; text-align:center; padding:20px; z-index:99; } .ans-box { font-size: 6rem; border: 10px solid #f1c40f; padding: 20px; border-radius: 20px; margin-top: 30px; } .ranking { width:80%; border-collapse:collapse; } .rank-row { font-size:4rem; padding:20px; border-bottom:2px solid #555; display:flex; justify-content:space-between; }</style></head><body><div id="winner-display" style="display:none;"></div><div id="text"></div><div id="res-container" style="display:none; text-align:center;"><div id="res-msg" style="font-size:3rem;"></div><div id="res-ans" class="ans-box"></div></div><div id="rank-container" style="display:none; width:100%; text-align:center;"><h1>🏆 Final Results 🏆</h1><div id="rank-list" style="display:flex; flex-direction:column; align-items:center;"></div></div><script>window.showWinner=(n)=>{const el=document.getElementById('winner-display'); el.innerHTML='<div class="banner">'+n+' 解答中...</div>'; el.style.display='block';}; window.showResult=(m,c,a)=>{document.getElementById('winner-display').style.display='none'; document.getElementById('res-msg').innerText=m; document.getElementById('res-msg').style.color=c; document.getElementById('res-ans').innerText=a; document.getElementById('res-container').style.display='block';}; window.showFlash=(m,c)=>{const div=document.createElement("div"); div.innerText=m; div.style.cssText="position:fixed; top:40%; left:50%; transform:translateX(-50%); font-size:10rem; color:"+c+"; font-weight:bold; z-index:100;"; document.body.appendChild(div); setTimeout(()=>div.remove(), 2000);}; window.showFinalResults=(data)=>{document.getElementById('text').style.display='none'; document.getElementById('res-container').style.display='none'; const list=document.getElementById('rank-list'); list.innerHTML=data.map((r,i)=>'<div class="rank-row"><span>'+(i+1)+'位 '+r.name+'</span><span>'+r.score+' pts</span></div>').join(''); document.getElementById('rank-container').style.display='block';}; window.resetForNext=()=>{document.getElementById('text').style.display='flex'; document.getElementById('res-container').style.display='none'; document.getElementById('winner-display').style.display='none'; document.getElementById('rank-container').style.display='none';};<\/script></body></html>`);
     }
 
     function resetScoresOnly() { if (confirm("スコアをリセットしますか？")) { db.ref("scores").remove(); db.ref("lockedPlayers").remove(); } }
