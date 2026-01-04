@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Final Stability</title>
+    <title>QuizConsole Pro - Final Stability Fixed</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -22,8 +22,6 @@
         #remote-button { width: 280px; height: 280px; border-radius: 50%; border: 15px solid #bdc3c7; background: #ecf0f1; font-size: 3.5rem; margin: 20px auto; display: none; cursor: pointer; transition: 0.2s; user-select: none; }
         #remote-button.active { border-color: #e74c3c; background: #ff4757; color: white; box-shadow: 0 10px 0 #c0392b; }
         .board-answer { background: #fff; border: 1px solid #ccc; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .toggle-show { cursor: pointer; padding: 4px 8px; background: #95a5a6; color: white; border: none; border-radius: 4px; font-weight: bold; }
-        .toggle-show.active { background: var(--primary); }
         .search-box { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
     </style>
 </head>
@@ -54,7 +52,6 @@
             <div style="display:flex; gap:10px; margin:15px 0; align-items:center; justify-content:center;">
                 <button style="flex:1; height:70px; background:var(--success); color:white; font-size:1.8rem; border-radius:8px;" onclick="manualJudge(true)">⭕ 正解</button>
                 <button style="flex:1; height:70px; background:var(--danger); color:white; font-size:1.8rem; border-radius:8px;" onclick="manualJudge(false)">❌ 誤答</button>
-                <label style="font-size:0.8rem;"><input type="checkbox" id="applyWaitOnWrong" checked> 誤答で休み適用</label>
             </div>
             <button style="width:100%; height:55px; background:var(--test); color:white; border-radius:8px; margin-bottom:8px; font-weight:bold; font-size:1.2rem;" onclick="resumeQuiz()">▶ 読上再開 / 続行</button>
             <button style="width:100%; height:45px; background:var(--warn); color:white; border-radius:8px;" onclick="revealAnswerToSub()">📢 答えを公開</button>
@@ -193,10 +190,6 @@
         stopQuiz(); currentQuiz = obj; revealedIndexes = []; quizCorrectCount = 0;
         usedQuizzes.add(obj.q);
         quizHistory.push(obj);
-        db.ref("waits").once("value", snap => {
-            const w = snap.val() || {};
-            for(let u in w) if(w[u] > 0) db.ref("waits/"+u).set(w[u] - 1);
-        });
         db.ref().update({ status: "idle", winner: "", correctList: null, wrongList: null, showWrongBoard: null, correctCount: 0, boardAnswers: null, finalReveal: false });
         document.getElementById("adminAnswer").innerText = obj.a;
         document.getElementById("adminFullText").innerText = obj.q;
@@ -242,19 +235,18 @@
             quizCorrectCount++;
             db.ref("correctCount").set(quizCorrectCount);
             db.ref("correctList/" + player).set(true); 
-            if(subWindow) subWindow.showResult(player+" 正解！","#2ecc71",'correct');
+            if(subWindow) subWindow.showResult(player + " 正解！", "#2ecc71", 'correct');
             if(quizCorrectCount >= maxLimit) db.ref("status").set("idle");
-            else db.ref().update({winner:"", status:"pushed_done"}); 
+            else db.ref().update({winner: "", status: "pushed_done"}); 
         } else {
             db.ref("scores/" + player).transaction(s => (s || 0) + mPts);
             db.ref("wrongList/" + player).set(true);
-            
-            // 重要：誤答判定時に「3秒後に消す」指示を視聴者画面に送る
-            if(subWindow && !subWindow.closed) subWindow.triggerDelayedHide(player);
-            
-            if(document.getElementById("applyWaitOnWrong").checked) db.ref("waits/"+player).set(waitCount);
-            if(subWindow) subWindow.showFlash("❌","#e74c3c",'wrong');
-            db.ref().update({winner:"", status:"pushed_done"}); 
+            if(subWindow) {
+                subWindow.showFlash("❌", "#e74c3c", 'wrong');
+                subWindow.triggerDelayedHide(player); // 視聴者画面で3秒後に消す
+            }
+            db.ref("waits/"+player).set(waitCount);
+            db.ref().update({winner: "", status: "pushed_done"}); 
         }
     }
 
@@ -288,7 +280,7 @@
                         return `<div class="board-answer" style="${isC?'background:#e8f5e9':isW?'background:#ffebee':''}">
                             <span><strong>${name}:</strong> ${ans}</span>
                             <div>
-                                <button class="toggle-show ${show?'active':''}" onclick="db.ref('showWrongBoard/${name}').transaction(s=>!s)">${show?'🙈':'👁'}</button>
+                                <button class="toggle-show" onclick="db.ref('showWrongBoard/${name}').transaction(s=>!s)">${show?'🙈':'👁'}</button>
                                 <button onclick="manualJudge(true, '${name}')">〇</button>
                                 <button onclick="manualJudge(false, '${name}')">×</button>
                             </div>
@@ -297,7 +289,10 @@
                 } else boardDiv.innerHTML = "回答待機中...";
             } else boardDiv.style.display = "none";
             
-            if(d.status === "pushed" && lastStatus !== "pushed") { stopQuiz(); if(subWindow) subWindow.showWinner(currentWinner); }
+            if(d.status === "pushed" && lastStatus !== "pushed") { 
+                stopQuiz(); 
+                if(subWindow) subWindow.showWinner(currentWinner); // ここで名前を渡す
+            }
             lastStatus = d.status;
             if(subWindow) subWindow.syncBoard(d);
         });
@@ -316,10 +311,10 @@
             #ranking{flex:1;background:#111;padding:20px;}
             #text{font-size:3.5rem;text-align:center;width:90%;display:flex;flex-wrap:wrap;justify-content:center;line-height:1.3;}
             #text span.hidden{visibility:hidden;}
-            .banner{position:fixed;top:0;width:100%;background:#c0392b;font-size:5rem;text-align:center;padding:20px;z-index:10;}
+            .banner{position:fixed;top:0;width:100%;background:#c0392b;font-size:5rem;text-align:center;padding:20px;z-index:10;width:100%;}
             .ans-box{font-size:5rem;border:10px solid #f1c40f;padding:20px;border-radius:20px;margin-top:20px;display:none;color:#f1c40f;text-align:center;}
             #board-area{display:flex;flex-wrap:wrap;justify-content:center;margin-top:20px;width:100%;}
-            .card{background:#222;border:2px solid #555;margin:10px;padding:15px;border-radius:10px;min-width:180px;text-align:center;transition: opacity 0.5s;}
+            .card{background:#222;border:2px solid #555;margin:10px;padding:15px;border-radius:10px;min-width:180px;text-align:center;}
             .card.correct{border-color:#2ecc71;background:#0a2a0a;}
             .card.wrong{border-color:#e74c3c;background:#2a0a0a;}
             #final-view{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;z-index:100;display:none;padding:50px;overflow-y:auto;box-sizing:border-box;}
@@ -336,31 +331,28 @@
                 window.initAudio = () => { if(!audioReady){ Object.values(snd).forEach(s=>{s.play().then(()=>s.pause());}); audioReady=true; } };
                 window.playTypeSound = () => { if(audioReady) { snd.type.currentTime=0; snd.type.play(); } };
                 
-                // 解答者名を表示するよう修正済み
-                window.showWinner = (n) => { 
+                window.showWinner = (name) => { 
                     if(audioReady) snd.buzzer.play(); 
-                    document.getElementById('banner').innerText = (n || "解答者") + " さんが解答中！"; 
-                    document.getElementById('banner').style.display='block'; 
+                    const b = document.getElementById('banner');
+                    b.innerText = (name || "回答者") + " さんが解答中！"; 
+                    b.style.display='block'; 
+                    b.style.background = '#c0392b';
                 };
                 
                 window.showResult = (m,c,s) => { if(audioReady) snd[s].play(); document.getElementById('banner').style.background=c; document.getElementById('banner').innerText=m; };
                 window.showFlash = (m,c,s) => { if(audioReady) snd[s].play(); };
 
-                // 誤答判定から3秒後にリストに追加し、syncBoardで消去対象とする
                 window.triggerDelayedHide = (player) => {
                     setTimeout(() => {
                         delayedHiding.add(player);
-                    }, 3000); // 3秒間の余韻
+                    }, 3000);
                 };
 
                 window.syncBoard = (d) => {
                     if(d.mode !== 'board' || !d.boardAnswers) return;
                     document.getElementById('board-area').innerHTML = Object.entries(d.boardAnswers).map(([name, ans]) => {
                         const isC = d.correctList && d.correctList[name], isW = d.wrongList && d.wrongList[name], showW = d.showWrongBoard && d.showWrongBoard[name];
-                        
-                        // 誤答(isW)かつ遅延消滅リストに入っているなら、管理者指示(showW)がない限り表示しない
                         if(isW && delayedHiding.has(name) && !showW) return "";
-                        
                         let disp = (d.finalReveal || isC || (isW && showW)) ? ans : "？？？";
                         return '<div class="card '+(isC?'correct':isW?'wrong':'')+'"><div>'+name+'</div><div style="font-size:2rem">'+disp+'</div></div>';
                     }).join('');
@@ -374,14 +366,6 @@
                     document.getElementById('banner').style.display='none'; 
                     document.getElementById('ans').style.display='none'; 
                     document.getElementById('board-area').innerHTML=''; 
-                    document.getElementById('final-view').style.display='none'; 
-                };
-                window.showResultView = (history) => {
-                    const f = document.getElementById('final-view'); f.style.display = 'block';
-                    let html = '<h1>FINAL RANKING</h1>';
-                    html += Object.entries(scores).sort((a,b)=>b[1]-a[1]).map(([n,v],i)=>'<div style="font-size:2rem">'+(i+1)+'位: '+n+' ('+v+'pt)</div>').join('');
-                    html += '<hr><h3>HISTORY</h3>' + history.map(h => '<div>Q: '+h.q+'<br>A: '+h.a+'</div>').join('<br>');
-                    f.innerHTML = html;
                 };
             <\/script></body></html>`);
     }
