@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Circle Fix</title>
+    <title>QuizConsole Pro - Max Winners Adj</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -26,9 +26,8 @@
         .type-btns button { padding: 8px 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: white; font-weight: bold; font-size: 0.85rem; }
         #remote-button { width: 220px; height: 220px; border-radius: 50%; font-size: 2rem; font-weight: bold; cursor: pointer; border: 10px solid #eee; }
         #remote-button:not(:disabled) { background: var(--danger); color: white; border-color: #c0392b; }
-        #remote-button:disabled { background: #ccc; color: #888; cursor: not-allowed; }
         .speed-ctrl { background: #eee; padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px; margin-top: 10px; border: 1px solid #ccc; }
-        .turn-notice { background: #fff3cd; padding: 15px; border-radius: 8px; border: 2px solid #f39c12; margin-bottom: 15px; font-weight: bold; }
+        .admin-info-box { background: #e8f4fd; border-left: 5px solid var(--primary); padding: 10px; margin-top: 10px; font-size: 0.95rem; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -51,11 +50,14 @@
                 </div>
                 
                 <div style="background:#fff3cd; padding:15px; border-radius:10px; text-align:center; border:2px solid #f1c40f; margin-bottom:15px;">
-                    <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
                         <select id="gameMode" onchange="db.ref('mode').set(this.value)">
                             <option value="push">⚡ 早押しモード</option>
                             <option value="board">📝 ボードモード</option>
                         </select>
+                        <div style="background:white; padding:5px 10px; border-radius:5px; border:1px solid #ccc; font-size:0.85rem;">
+                            最大正解者数: <input type="number" id="maxWinners" value="1" min="1" max="50" style="width:40px;" onchange="db.ref('maxWinners').set(parseInt(this.value))">
+                        </div>
                         <button onclick="toggleRanking()" style="cursor:pointer;">🏆 ランキング切替</button>
                     </div>
                     <div id="activePlayer" style="font-size:2.8rem; font-weight:bold; color:var(--danger); min-height:1.2em;">---</div>
@@ -77,10 +79,16 @@
                     <button onclick="openCircleOnly()" style="background:#f39c12; color:white; border:none;">〇のみ公開</button>
                     <button onclick="openAll()" style="background:#555; color:white; border:none; margin-left:auto;">全表示</button>
                 </div>
+
                 <div id="display"></div>
+
+                <div class="admin-info-box">
+                    <strong>【現在出題中の全文】</strong><br>
+                    <span id="admin-q-full" style="color:var(--dark); font-weight:bold;">(問題を選択してください)</span><br><br>
+                    <strong>正解：</strong> <span id="admin-a-full" style="color:var(--danger); font-weight:bold; font-size:1.2rem;">-</span>
+                </div>
                 
-                <div class="container" style="background:#f8f9fa; border:1px solid #ccc;">
-                    <strong>正解：</strong> <span id="ans-hint" style="color:red; font-weight:bold; font-size:1.2rem;">-</span><br>
+                <div class="container" style="background:#f8f9fa; border:1px solid #ccc; margin-top:15px;">
                     <div class="speed-ctrl">
                         <span>読上速度(ms):</span>
                         <input type="range" id="readSpeed" min="50" max="1000" value="150" step="10" oninput="document.getElementById('speedVal').innerText=this.value">
@@ -107,10 +115,9 @@
         <div id="p-wait" style="color:var(--danger); font-weight:bold; height:1.5em; margin:10px;"></div>
         <div id="player-status-area"></div>
         <input type="text" id="p-name" placeholder="名前を入力" style="width:85%; padding:15px; font-size:1.3rem; text-align:center; border-radius:10px; border:3px solid #ddd; margin-bottom:20px;">
-        
         <div id="board-input-ui" style="display:none; margin-bottom:20px;">
-            <input type="text" id="board-text" placeholder="答えを入力" style="width:85%; padding:15px; font-size:1.8rem; border:3px solid var(--success); border-radius:10px;"><br><br>
-            <button onclick="sendBoardAns()" style="padding:15px 40px; background:var(--success); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">回答を送信</button>
+            <input type="text" id="board-text" placeholder="ここに答えを入力" style="width:85%; padding:15px; font-size:1.8rem; border:3px solid var(--success); border-radius:10px;"><br><br>
+            <button onclick="sendBoardAns()" style="padding:15px 40px; background:var(--success); color:white; border:none; border-radius:10px; font-weight:bold;">回答を送信</button>
         </div>
         <button id="remote-button" onclick="pushBtn()">PUSH!</button>
     </div>
@@ -134,7 +141,7 @@
 
     let masterData = { all: [] }, currentPool = [], usedSet = new Set(), currentQuiz = { q: "", a: "" }, revealed = [];
     let timer = null, subWindow = null, curWinner = "", lastStatus = "", rankVisible = true;
-    let correctCount = 0;
+    let correctCount = 0, currentMaxWinners = 1;
 
     function switchPage(role) {
         document.querySelectorAll('.page-section').forEach(el => el.style.display = 'none');
@@ -164,12 +171,18 @@
             document.getElementById('activePlayer').innerText = curWinner || "---";
             rankVisible = d.rankVisible !== false;
             correctCount = d.correctList ? Object.keys(d.correctList).length : 0;
+            currentMaxWinners = d.maxWinners || 1;
+            document.getElementById('maxWinners').value = currentMaxWinners;
+
             const bArea = document.getElementById('boardResults');
             if(d.mode === 'board' && d.boardAnswers) {
                 bArea.style.display = 'block';
-                bArea.innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => `<div class="board-ans-item"><span><strong>${n}:</strong> ${ans}</span><div class="judge-btns-mini"><button style="background:var(--success);color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;" onclick="judge(true, '${n}')">〇</button><button style="background:var(--danger);color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;" onclick="judge(false, '${n}')">×</button><button style="background:#7f8c8d;color:white;padding:6px 10px;border:none;border-radius:4px;cursor:pointer;" onclick="removeBoard('${n}')">消去</button></div></div>`).join('');
+                bArea.innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => `<div class="board-ans-item"><span><strong>${n}:</strong> ${ans}</span><div class="judge-btns-mini"><button style="background:var(--success);color:white;padding:6px 10px;border:none;border-radius:4px;" onclick="judge(true, '${n}')">〇</button><button style="background:var(--danger);color:white;padding:6px 10px;border:none;border-radius:4px;" onclick="judge(false, '${n}')">×</button><button style="background:#7f8c8d;color:white;padding:6px 10px;border:none;border-radius:4px;" onclick="removeBoard('${n}')">消去</button></div></div>`).join('');
             } else { bArea.style.display = 'none'; }
-            if(d.status === "pushed") { clearInterval(timer); play('push'); }
+            
+            if(d.status === "pushed" && lastStatus !== "pushed") { clearInterval(timer); play('push'); }
+            lastStatus = d.status;
+
             const scores = d.scores || {}, waits = d.waits || {};
             const sortedNames = Object.keys(scores).sort((a,b) => scores[b] - scores[a]);
             document.getElementById('full-mgr-list').innerHTML = sortedNames.map(n => `
@@ -204,13 +217,15 @@
     function applyQuiz(q, a) {
         clearInterval(timer);
         currentQuiz = { q, a }; revealed = []; usedSet.add(q);
+        document.getElementById('admin-q-full').innerText = q;
+        document.getElementById('admin-a-full').innerText = a;
+
         db.ref('waits').once('value', snap => {
             const w = snap.val() || {}, up = {};
             Object.entries(w).forEach(([n, v]) => { up[n] = Math.max(0, v - 1); });
             db.ref('waits').update(up);
         });
         db.ref().update({ status: "waiting", winner: "", correctList: null, wrongList: null, boardAnswers: null, finalReveal: false });
-        document.getElementById('ans-hint').innerText = a;
         if(subWindow) subWindow.resetForNext();
         sync(true); renderList();
     }
@@ -239,22 +254,33 @@
 
     function judge(isOK, targetPlayer = null) {
         const p = targetPlayer || curWinner; if(!p) return;
-        db.ref('mode').once('value', snap => {
-            const mode = snap.val();
+        db.ref().once('value', snap => {
+            const d = snap.val();
+            const mode = d.mode;
+            const max = d.maxWinners || 1;
+            
             if(isOK) {
                 play('correct');
-                let bonus = (mode === 'board') ? (correctCount === 0 ? 3 : (correctCount === 1 ? 2 : 1)) : 2;
+                let curCount = d.correctList ? Object.keys(d.correctList).length : 0;
+                let bonus = (mode === 'board') ? (curCount === 0 ? 3 : (curCount === 1 ? 2 : 1)) : 2;
                 db.ref('scores/' + p).transaction(s => (s||0) + bonus);
                 db.ref('correctList/' + p).set(true);
-                if(subWindow) subWindow.showBanner(p + " 正解！(+" + bonus + ")", "#2ecc71");
-                if(mode !== 'board') db.ref().update({ status: "idle", winner: "" });
+                if(subWindow) subWindow.showBanner(p + " 正解！", "#2ecc71");
+                
+                // 正解者が最大数に達したら終了
+                if(curCount + 1 >= max) {
+                    db.ref().update({ status: "idle", winner: "" });
+                } else {
+                    db.ref('winner').set(""); // 次の人が押せるように
+                }
             } else {
                 play('wrong');
                 db.ref('scores/' + p).transaction(s => (s||0) - 1);
                 db.ref('waits/' + p).set(2);
                 db.ref('wrongList/' + p).set(true);
                 if(subWindow) subWindow.showBanner(p + " ×", "#e74c3c");
-                if(mode !== 'board') db.ref().update({ status: "pushed_done", winner: "" });
+                db.ref('winner').set(""); // 誤答でも次の人が押せるように
+                if(mode !== 'board' && (d.status === 'pushed')) db.ref('status').set('active');
             }
         });
     }
@@ -265,42 +291,45 @@
         const m = { kanji:/[\u4E00-\u9FFF]/, hira:/[\u3040-\u309F]/, kana:/[\u30A0-\u30FF]/, num:/[0-9０-９]/, alp:/[a-zＡ-Ｚ]/i, sym:/[！？、。：；／＿－＝＋＊＆％＄＃＠！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～「」『』【】（）ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/ };
         Array.from(currentQuiz.q).forEach((c,i) => { if(m[t] && m[t].test(c)) if(!revealed.includes(i)) revealed.push(i); }); sync();
     }
-    
-    // ロジック調整：問題文にある「〇」と「○」のみを公開
     function openCircleOnly() {
         db.ref('status').set('active'); play('type');
-        Array.from(currentQuiz.q).forEach((c,i) => { 
-            if(c === '〇' || c === '○') { 
-                if(!revealed.includes(i)) revealed.push(i); 
-            } 
-        }); 
-        sync();
+        Array.from(currentQuiz.q).forEach((c,i) => { if(c === '〇' || c === '○') if(!revealed.includes(i)) revealed.push(i); }); sync();
     }
-
     function resumeQuiz() { db.ref('status').set('active'); startQuiz(); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
     function openAll() { db.ref('status').set('active'); revealed = Array.from(currentQuiz.q).map((_,i)=>i); sync(); }
-    function resetAll() { if(confirm("完全リセットしますか？")) db.ref().set({ status: "idle", mode: "push", rankVisible: true }); }
+    function resetAll() { if(confirm("完全リセットしますか？")) db.ref().set({ status: "idle", mode: "push", rankVisible: true, maxWinners: 1 }); }
 
     function initPlayer() {
         const btn = document.getElementById('remote-button'), bUI = document.getElementById('board-input-ui'), sArea = document.getElementById('player-status-area'), ni = document.getElementById('p-name');
         db.ref().on('value', snap => {
             const d = snap.val() || {}; const name = ni.value.trim();
             const w = (d.waits && d.waits[name]) || 0;
+            const isCorrected = d.correctList && d.correctList[name];
+
             document.getElementById('p-score').innerText = (d.scores && d.scores[name]) || 0;
             document.getElementById('p-wait').innerText = w > 0 ? "あと " + w + " 回休み" : "";
+            
             if(d.winner === name && name !== "") {
-                if(d.mode === 'board') { bUI.style.display = 'block'; btn.style.display = 'none'; sArea.innerHTML = '<div class="turn-notice">✨ 回答を入力してください ✨</div>';
-                } else { bUI.style.display = 'none'; btn.style.display = 'inline-block'; sArea.innerHTML = '<div class="turn-notice">✨ 解答権獲得！ ✨</div>'; }
-            } else { bUI.style.display = 'none'; btn.style.display = 'inline-block'; sArea.innerHTML = ''; }
-            btn.disabled = !(name && w === 0 && d.status === 'active' && !d.winner);
+                if(d.mode === 'board') { 
+                    bUI.style.display = 'block'; btn.style.display = 'none'; 
+                    sArea.innerHTML = '<div style="background:#fff3cd;padding:10px;border-radius:8px;border:2px solid #f39c12;">✨ 回答を入力 ✨</div>';
+                } else { 
+                    bUI.style.display = 'none'; btn.style.display = 'inline-block'; 
+                    sArea.innerHTML = '<div style="background:#fff3cd;padding:10px;border-radius:8px;border:2px solid #f39c12;">✨ 口頭で回答！ ✨</div>'; 
+                }
+            } else { 
+                bUI.style.display = 'none'; btn.style.display = 'inline-block'; 
+                sArea.innerHTML = isCorrected ? '<div style="color:var(--success);font-weight:bold;">✅ 正解済み</div>' : ''; 
+            }
+            // ボタン有効条件：名前あり、休みなし、アクティブ状態、未回答、かつ誰も押していない
+            btn.disabled = !(name && w === 0 && d.status === 'active' && !d.winner && !isCorrected);
         });
     }
 
     function sendBoardAns() {
-        const name = document.getElementById('p-name').value.trim();
-        const text = document.getElementById('board-text').value.trim();
-        if(!text) return; db.ref('boardAnswers/' + name).set(text); db.ref().update({ status: "active", winner: "" }); 
+        const name = document.getElementById('p-name').value.trim(), text = document.getElementById('board-text').value.trim();
+        if(!text) return; db.ref('boardAnswers/' + name).set(text); db.ref('winner').set(""); 
         document.getElementById('board-text').value = "";
     }
     function pushBtn() {
