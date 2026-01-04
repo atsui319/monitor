@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - The Perfect Version</title>
+    <title>QuizConsole Pro - Sound Fixed</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -118,6 +118,7 @@
 </div>
 
 <script>
+    // ... (Firebase設定と変数定義) ...
     const firebaseConfig = { databaseURL: "https://realtime-database-c0015-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -139,6 +140,7 @@
     function requestSound(s) { if(subWindow && !subWindow.closed && subWindow.play) subWindow.play(s); }
     function switchPage(role) { document.querySelectorAll('.page-section').forEach(el => el.style.display = 'none'); document.getElementById(role + '-ui').style.display = 'block'; role === 'admin' ? initAdmin() : initPlayer(); }
 
+    // ... (中略：initAdmin, removePlayer, modify等) ...
     async function initAdmin() {
         db.ref('usedSet').on('value', s => { usedSet = new Set(s.val() || []); renderList(); });
         const tabs = document.getElementById('genre-tabs');
@@ -195,101 +197,45 @@
     function startQuiz() { db.ref('status').set('active'); const speed = parseInt(document.getElementById('readSpeed').value); clearInterval(timer); timer = setInterval(() => { if(revealed.length < currentQuiz.q.length) { let n = 0; while(revealed.includes(n)) n++; revealed.push(n); sync(); } else clearInterval(timer); }, speed); }
     function sync(forceHideSub = false) { const h = Array.from(currentQuiz.q).map((c, i) => revealed.includes(i) ? `<span>${hEsc(c)}</span>` : `<span class="hidden">${hEsc(c)}</span>`).join(''); document.getElementById('display').innerHTML = h; if(subWindow && !forceHideSub) subWindow.document.getElementById('text').innerHTML = h; }
     
-    // ★属性別オープン（正規表現の網羅性を強化）
     function openType(t) {
         db.ref('status').set('active');
-        const m = { 
-            kanji:/[\u4E00-\u9FFF]/, 
-            hira:/[\u3040-\u309F]/, 
-            kana:/[\u30A0-\u30FF]/, 
-            num:/[0-9０-９]/, 
-            alp:/[a-zA-Zａ-ｚＡ-Ｚ]/, 
-            sym:/[！・？、。：；／＿－＝＋＊＆％＄＃＠！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～「」『』【】（）ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/ 
-        };
+        const m = { kanji:/[\u4E00-\u9FFF]/, hira:/[\u3040-\u309F]/, kana:/[\u30A0-\u30FF]/, num:/[0-9０-９]/, alp:/[a-zA-Zａ-ｚＡ-Ｚ]/, sym:/[！・？、。：；／＿－＝＋＊＆％＄＃＠！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～「」『』【】（）ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/ };
         let count = 0; Array.from(currentQuiz.q).forEach((c, i) => { if (m[t] && m[t].test(c) && !revealed.includes(i)) { revealed.push(i); count++; } });
         if (count > 0) requestSound('type'); sync();
     }
-    // ★〇/○両対応オープン
-    function openCircleOnly() { 
-        let count = 0;
-        Array.from(currentQuiz.q).forEach((c, i) => { if ((c === '〇' || c === '○' || c === 'o' || c === 'O') && !revealed.includes(i)) { revealed.push(i); count++; } }); 
-        if(count > 0) requestSound('type'); sync(); 
-    }
+    function openCircleOnly() { let count = 0; Array.from(currentQuiz.q).forEach((c, i) => { if ((c === '〇' || c === '○') && !revealed.includes(i)) { revealed.push(i); count++; } }); if(count > 0) requestSound('type'); sync(); }
     function openAll() { revealed = Array.from(currentQuiz.q).map((_, i) => i); sync(); }
 
+    // ★正誤判定（不正解音を確実に再生）
     function judge(isOK, targetPlayer = null) {
+        // 先に音声をリクエストする
         requestSound(isOK ? 'correct' : 'wrong');
+        
         db.ref().once('value', snap => {
-            const d = snap.val(), p = targetPlayer || d.winner; if(!p) return;
-            const sn = safeName(p); const pt = parseInt(document.getElementById('currentPoint').value) || 1;
-            if(isOK) { db.ref('scores/'+sn).transaction(s => (s||0)+pt); db.ref('correctList/'+sn).set(true); }
-            else { db.ref('scores/'+sn).transaction(s => (s||0)-1); db.ref('waits/'+sn).set(2); db.ref('wrongList/'+sn).set(true); }
+            const d = snap.val();
+            const p = targetPlayer || d.winner;
+            if(!p) return;
+            const sn = safeName(p);
+            const pt = parseInt(document.getElementById('currentPoint').value) || 1;
+            
+            if(isOK) {
+                db.ref('scores/'+sn).transaction(s => (s||0)+pt);
+                db.ref('correctList/'+sn).set(true);
+            } else {
+                db.ref('scores/'+sn).transaction(s => (s||0)-1);
+                db.ref('waits/'+sn).set(2);
+                db.ref('wrongList/'+sn).set(true);
+            }
             if(d.mode !== 'all_board') db.ref().update({ winner: "", status: "active" });
         });
     }
+
+    // ... (中略：resumeQuiz, revealAnswer, resetAll, lockName, initPlayer等) ...
     function resumeQuiz() { db.ref('status').set('active'); if(revealed.length < currentQuiz.q.length) startQuiz(); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
-    function resetAll() {
-  if (confirm("全ての状態をリセットしますか？")) {
-
-    // ★ 管理画面側の履歴を完全初期化
-    history = [];
-    usedSet.clear();          // ← これが一番重要
-
-    // ★ Firebase側も初期化
-    db.ref().set({
-      status: "idle",
-      mode: "push",
-      rankVisible: true,
-      isGameSet: false,
-      usedSet: []
-    });
-
-    // ★ 問題リストを即再描画
-    renderList();
-  }
-}
-
-    
-    // ★名前変更不可（inputを完全に無効化）
-    function lockName() { 
-        const n = document.getElementById('p-name').value.trim(); 
-        if(!n) return alert("名前を入力してください"); 
-        isPlayerLocked = true; 
-        document.getElementById('p-name').disabled = true;
-        document.getElementById('p-lock-btn').style.display = 'none';
-        document.getElementById('locked-name-display').style.display = 'block'; 
-        document.getElementById('current-player-name').innerText = n; 
-    }
-
-    function initPlayer() {
-        const bUI = document.getElementById('board-input-ui'), sArea = document.getElementById('player-status-area'), goS = document.getElementById('player-gameover');
-        db.ref().on('value', snap => {
-            if(!isPlayerLocked) return;
-            const d = snap.val() || {};
-            const name = document.getElementById('p-name').value.trim();
-            const sn = safeName(name);
-            const score = d.scores?.[sn] || 0;
-            document.getElementById('p-score').innerText = score;
-            if(d.isGameSet) {
-                goS.style.display = 'flex';
-                document.getElementById('final-p-score').innerText = score;
-                const scoreEntries = Object.entries(d.scores || {}).sort((a,b)=>b[1]-a[1]);
-                const rank = scoreEntries.findIndex(e => e[0] === sn) + 1;
-                document.getElementById('final-rank-text').innerText = scoreEntries.length > 0 ? `あなたは全 ${scoreEntries.length} 人中 ${rank} 位です！` : "";
-            } else { goS.style.display = 'none'; }
-            const w = (d.waits && d.waits[sn]) || 0;
-            const isCorrected = d.correctList && d.correctList[sn];
-            const isWinner = (d.winner === name);
-            const showBoard = (d.mode === 'all_board' && d.status !== 'waiting') || (isWinner && (d.mode === 'board' || d.mode === 'all_board'));
-            bUI.style.display = showBoard ? 'block' : 'none';
-            if(isCorrected) sArea.innerHTML = "✅ 正解！";
-            else if(isWinner) sArea.innerHTML = "🎤 解答権！";
-            else if(w > 0) sArea.innerHTML = "❌ お休み (" + w + ")";
-            else sArea.innerHTML = d.status === 'active' ? "受付中" : "待機中";
-            document.getElementById('remote-button').disabled = !(w === 0 && d.status === 'active' && !d.winner && !isCorrected && d.mode !== 'all_board');
-        });
-    }
+    function resetAll() { if (confirm("完全リセット？")) { history = []; db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [] }); } }
+    function lockName() { const n = document.getElementById('p-name').value.trim(); if(!n) return alert("名前！"); isPlayerLocked = true; document.getElementById('p-name').disabled = true; document.getElementById('p-lock-btn').style.display = 'none'; document.getElementById('locked-name-display').style.display = 'block'; document.getElementById('current-player-name').innerText = n; }
+    function initPlayer() { const bUI = document.getElementById('board-input-ui'), sArea = document.getElementById('player-status-area'), goS = document.getElementById('player-gameover'); db.ref().on('value', snap => { if(!isPlayerLocked) return; const d = snap.val() || {}; const name = document.getElementById('p-name').value.trim(); const sn = safeName(name); const score = d.scores?.[sn] || 0; document.getElementById('p-score').innerText = score; if(d.isGameSet) { goS.style.display = 'flex'; document.getElementById('final-p-score').innerText = score; const scoreEntries = Object.entries(d.scores || {}).sort((a,b)=>b[1]-a[1]); const rank = scoreEntries.findIndex(e => e[0] === sn) + 1; document.getElementById('final-rank-text').innerText = scoreEntries.length > 0 ? `あなたは全 ${scoreEntries.length} 人中 ${rank} 位です！` : ""; } else { goS.style.display = 'none'; } const w = (d.waits && d.waits[sn]) || 0; const isCorrected = d.correctList && d.correctList[sn]; const isWinner = (d.winner === name); const showBoard = (d.mode === 'all_board' && d.status !== 'waiting') || (isWinner && (d.mode === 'board' || d.mode === 'all_board')); bUI.style.display = showBoard ? 'block' : 'none'; if(isCorrected) sArea.innerHTML = "✅ 正解！"; else if(isWinner) sArea.innerHTML = "🎤 解答権！"; else if(w > 0) sArea.innerHTML = "❌ お休み (" + w + ")"; else sArea.innerHTML = d.status === 'active' ? "受付中" : "待機中"; document.getElementById('remote-button').disabled = !(w === 0 && d.status === 'active' && !d.winner && !isCorrected && d.mode !== 'all_board'); }); }
     function reportTyping(val) { const name = safeName(document.getElementById('p-name').value.trim()); if(isPlayerLocked) db.ref('typing/'+name).set(val.length > 0); }
     function sendBoardAns() { const name = safeName(document.getElementById('p-name').value.trim()), t = document.getElementById('board-text').value.trim(); if(name && t) { db.ref('boardAnswers/'+name).set(t); db.ref('typing/'+name).set(false); document.getElementById('board-text').value=""; } }
     function pushBtn() { const name = document.getElementById('p-name').value.trim(); if(!isPlayerLocked) return; db.ref('winner').transaction(c => c ? undefined : name, (err, ok) => { if(ok) db.ref('status').set('pushed'); }); }
@@ -314,17 +260,29 @@
             <div id="main-container"><div id="text"></div><div id="ans"></div><div id="board-area"></div></div>
             <div id="rank-side"><h2>RANKING</h2><div id="rank-list"></div></div>
             <script>
-                const sounds = { push: new Audio('sounds/push.mp3'), correct: new Audio('sounds/correct.mp3'), wrong: new Audio('sounds/wrong.mp3'), type: new Audio('sounds/type.mp3') };
-                Object.values(sounds).forEach(s => s.load());
-                window.play = (s) => { if(sounds[s]) { sounds[s].pause(); sounds[s].currentTime = 0; sounds[s].play().catch(e => 0); } };
+                // 音声ファイルの定義
+                const sounds = { 
+                    push: new Audio('sounds/push.mp3'), 
+                    correct: new Audio('sounds/correct.mp3'), 
+                    wrong: new Audio('sounds/wrong.mp3'), 
+                    type: new Audio('sounds/type.mp3') 
+                };
+                
+                // 事前ロード
+                Object.values(sounds).forEach(s => { s.load(); });
+
+                window.play = (s) => { 
+                    if(sounds[s]) { 
+                        sounds[s].pause(); 
+                        sounds[s].currentTime = 0; 
+                        sounds[s].play().catch(e => console.log("Audio play failed:", e)); 
+                    } 
+                };
+
                 window.reveal = (a,q) => { document.getElementById('ans').innerText=a; document.getElementById('ans').style.display='block'; document.getElementById('text').innerHTML=q; };
                 window.toggleRank = (v) => { document.getElementById('rank-side').style.opacity = v ? '1' : '0'; };
                 window.updateRank = (list) => { document.getElementById('rank-list').innerHTML = list.map(([n,v]) => '<div style="display:flex;justify-content:space-between;font-size:1.6rem;padding:8px 0;border-bottom:1px solid #333;"><span>'+n+'</span><span>'+v+'pt</span></div>').join(''); };
-                window.showResult = (list, hist) => { 
-                    document.getElementById('result-overlay').style.display='flex'; 
-                    document.getElementById('res-list').innerHTML = list.map(([n,v],i) => '<div style="font-size:2rem;margin:10px;padding:15px;background:rgba(255,255,255,0.1);border-radius:10px;border-left:10px solid '+(i===0?'#f1c40f':(i===1?'#bdc3c7':'#cd7f32'))+'">'+(i+1)+'位 '+n+': '+v+'pt</div>').join(''); 
-                    document.getElementById('hist-inner').innerHTML = hist.map(item => '<div style="margin-bottom:15px;border-bottom:1px solid #444;font-size:0.9rem;">'+item.q+'<br><b style="color:#f1c40f;font-size:1.2rem;">正解: '+item.a+'</b></div>').join(''); 
-                };
+                window.showResult = (list, hist) => { document.getElementById('result-overlay').style.display='flex'; document.getElementById('res-list').innerHTML = list.map(([n,v],i) => '<div style="font-size:2rem;margin:10px;padding:15px;background:rgba(255,255,255,0.1);border-radius:10px;border-left:10px solid '+(i===0?'#f1c40f':(i===1?'#bdc3c7':'#cd7f32'))+'">'+(i+1)+'位 '+n+': '+v+'pt</div>').join(''); document.getElementById('hist-inner').innerHTML = hist.map(item => '<div style="margin-bottom:15px;border-bottom:1px solid #444;font-size:0.9rem;">'+item.q+'<br><b style="color:#f1c40f;font-size:1.2rem;">正解: '+item.a+'</b></div>').join(''); };
                 window.hideResult = () => { document.getElementById('result-overlay').style.display='none'; };
                 window.syncBoard = (d) => {
                     const area = document.getElementById('board-area');
@@ -339,10 +297,15 @@
                     }).join('');
                 };
                 window.resetForNext = () => { document.getElementById('ans').style.display='none'; document.getElementById('board-area').innerHTML=''; document.getElementById('text').innerHTML=''; };
-                document.body.addEventListener('click', () => { Object.values(sounds).forEach(s => s.load()); }, { once: true });
+                
+                // 視聴者画面を一度クリックすることでブラウザの音声制限を解除する
+                document.body.addEventListener('click', () => { 
+                    Object.values(sounds).forEach(s => {
+                        s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(e => 0);
+                    });
+                }, { once: true });
             <\/script></body></html>`);
     }
 </script>
 </body>
 </html>
-
