@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Sound Fix</title>
+    <title>QuizConsole Pro - Speed Control</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -20,22 +20,15 @@
         .btn-genre.active { background: var(--primary); color: white; }
         
         .board-ans-item { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; margin-top: 5px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .judge-btns-mini { display: flex; gap: 4px; }
-        .judge-btns-mini button { padding: 6px 10px; cursor: pointer; border-radius: 4px; border: none; font-weight: bold; color: white; font-size: 0.8rem; }
-        .btn-ok { background: var(--success); }
-        .btn-ng { background: var(--danger); }
-        .btn-del { background: #7f8c8d; }
-
         .mgr-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-        .mgr-label { font-size: 0.85rem; flex: 1; }
         .mgr-ctrl { display: flex; gap: 5px; align-items: center; }
-        .mgr-ctrl button { padding: 2px 10px; cursor: pointer; font-weight: bold; border: 1px solid #ccc; background: #fff; }
+        .mgr-ctrl button { padding: 2px 10px; cursor: pointer; border: 1px solid #ccc; background: #fff; }
         .val-box { min-width: 25px; text-align: center; font-weight: bold; }
 
         .type-btns button { padding: 8px 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: white; font-weight: bold; font-size: 0.85rem; }
         #remote-button { width: 220px; height: 220px; border-radius: 50%; font-size: 2rem; font-weight: bold; cursor: pointer; border: 10px solid #eee; }
         #remote-button:not(:disabled) { background: var(--danger); color: white; border-color: #c0392b; }
-        .turn-notice { background: #fff3cd; border: 2px solid #f39c12; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 1.2rem; }
+        .speed-ctrl { background: #eee; padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px; margin-top: 10px; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
@@ -73,7 +66,7 @@
                         <button style="flex:1; height:65px; background:var(--danger); color:white; font-size:1.8rem; border-radius:8px; border:none; cursor:pointer;" onclick="judge(false)">❌ 誤答</button>
                     </div>
                     <div style="margin-top:10px; display:flex; gap:5px;">
-                        <button onclick="resumeQuiz()" style="flex:1; padding:12px;">▶ 続行/開始</button>
+                        <button onclick="resumeQuiz()" style="flex:1; padding:12px;">▶ 続行</button>
                         <button onclick="revealAnswer()" style="flex:1; padding:12px; background:var(--test); color:white; border:none; border-radius:5px; font-weight:bold;">📢 答え公開</button>
                     </div>
                 </div>
@@ -85,8 +78,14 @@
                     <button onclick="openAll()" style="background:#555; color:white; border:none; margin-left:auto;">全表示</button>
                 </div>
                 <div id="display"></div>
-                <div class="container" style="background:#eee; border:1px solid #ccc;">
+                
+                <div class="container" style="background:#f8f9fa; border:1px solid #ccc;">
                     <strong>正解：</strong> <span id="ans-hint" style="color:red; font-weight:bold; font-size:1.2rem;">-</span><br>
+                    <div class="speed-ctrl">
+                        <span>読上速度(ms):</span>
+                        <input type="range" id="readSpeed" min="50" max="1000" value="150" step="10" oninput="document.getElementById('speedVal').innerText=this.value">
+                        <span id="speedVal" style="font-weight:bold; width:40px;">150</span>
+                    </div>
                     <button onclick="startQuiz()" style="width:100%; padding:18px; margin-top:10px; background:var(--primary); color:white; font-size:1.4rem; border:none; border-radius:8px; font-weight:bold;">自動読上開始</button>
                 </div>
             </div>
@@ -94,7 +93,7 @@
 
         <div class="sidebar">
             <h3 style="margin:0 0 10px 0; font-size:1rem; color:var(--primary);">🏆 プレイヤー管理</h3>
-            <div id="full-mgr-list" style="margin-bottom:20px; max-height:300px; overflow-y:auto; border:1px solid #ddd; padding:5px; border-radius:8px; background:#fafafa;"></div>
+            <div id="full-mgr-list" style="margin-bottom:20px; max-height:280px; overflow-y:auto; border:1px solid #ddd; padding:5px; border-radius:8px; background:#fafafa;"></div>
             <div id="genre-tabs" style="display:flex; flex-wrap:wrap; gap:2px; margin-bottom:10px;"></div>
             <input type="text" id="search" placeholder="🔍 問題検索..." style="width:100%; padding:10px; border-radius:4px; border:1px solid #ccc;" oninput="renderList()">
             <div id="quiz-list-area"></div>
@@ -146,7 +145,6 @@
         const tabs = document.getElementById('genre-tabs');
         tabs.innerHTML = '<button class="btn-genre active" onclick="setGenre(\'all\')">全</button>' + 
             Object.keys(URLS).map(k => `<button class="btn-genre" onclick="setGenre('${k}')">${k}</button>`).join('');
-        
         for (let [k, url] of Object.entries(URLS)) {
             try {
                 const res = await fetch(url + "&t=" + Date.now());
@@ -159,63 +157,31 @@
             } catch(e) {}
         }
         setGenre('all');
-
         db.ref().on('value', snap => {
             const d = snap.val() || {};
             curWinner = d.winner || "";
             document.getElementById('activePlayer').innerText = curWinner || "---";
             rankVisible = d.rankVisible !== false;
             correctCount = d.correctList ? Object.keys(d.correctList).length : 0;
-            
             const bArea = document.getElementById('boardResults');
             if(d.mode === 'board' && d.boardAnswers) {
                 bArea.style.display = 'block';
-                bArea.innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => `
-                    <div class="board-ans-item">
-                        <span><strong>${n}:</strong> ${ans}</span>
-                        <div class="judge-btns-mini">
-                            <button class="btn-ok" onclick="judge(true, '${n}')">〇</button>
-                            <button class="btn-ng" onclick="judge(false, '${n}')">×</button>
-                            <button class="btn-del" onclick="removeBoard('${n}')">消去</button>
-                        </div>
-                    </div>`).join('');
+                bArea.innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => `<div class="board-ans-item"><span><strong>${n}:</strong> ${ans}</span><div class="judge-btns-mini"><button style="background:var(--success);color:white;padding:6px 10px;border:none;border-radius:4px;" onclick="judge(true, '${n}')">〇</button><button style="background:var(--danger);color:white;padding:6px 10px;border:none;border-radius:4px;" onclick="judge(false, '${n}')">×</button><button style="background:#7f8c8d;color:white;padding:6px 10px;border:none;border-radius:4px;" onclick="removeBoard('${n}')">消去</button></div></div>`).join('');
             } else { bArea.style.display = 'none'; }
-
-            // ステータスがpushedになったら音を鳴らす (連打対応)
-            if(d.status === "pushed") {
-                clearInterval(timer);
-                play('push');
-                // Firebase上のstatusを一度戻すことで、同じ人による2回目以降のpushも検知可能にする
-                if (d.winner) { /* 処理継続 */ }
-            }
+            if(d.status === "pushed") { clearInterval(timer); play('push'); }
             lastStatus = d.status;
-
-            const scores = d.scores || {};
-            const waits = d.waits || {};
+            const scores = d.scores || {}, waits = d.waits || {};
             const sortedNames = Object.keys(scores).sort((a,b) => scores[b] - scores[a]);
-            
             document.getElementById('full-mgr-list').innerHTML = sortedNames.map(n => `
                 <div style="border-bottom:1px solid #eee; padding:5px 0;">
-                    <div style="font-weight:bold; font-size:0.9rem; margin-bottom:4px;">👤 ${n}</div>
-                    <div class="mgr-item" style="border:none; padding:2px 0;">
-                        <span class="mgr-label">点数</span>
-                        <div class="mgr-ctrl">
-                            <button onclick="modifyScore('${n}', 1)">+</button>
-                            <span class="val-box">${scores[n]||0}</span>
-                            <button onclick="modifyScore('${n}', -1)">-</button>
-                        </div>
+                    <div style="font-weight:bold; font-size:0.9rem;">👤 ${n}</div>
+                    <div class="mgr-item" style="border:none; padding:0;">
+                        <span>点: <span class="val-box">${scores[n]||0}</span></span>
+                        <div class="mgr-ctrl"><button onclick="modifyScore('${n}', 1)">+</button><button onclick="modifyScore('${n}', -1)">-</button></div>
+                        <span style="margin-left:10px;">休: <span class="val-box" style="color:red;">${waits[n]||0}</span></span>
+                        <div class="mgr-ctrl"><button onclick="modifyWait('${n}', 1)">+</button><button onclick="modifyWait('${n}', -1)">-</button></div>
                     </div>
-                    <div class="mgr-item" style="border:none; padding:2px 0;">
-                        <span class="mgr-label">休み</span>
-                        <div class="mgr-ctrl">
-                            <button onclick="modifyWait('${n}', 1)">+</button>
-                            <span class="val-box" style="color:red;">${waits[n]||0}</span>
-                            <button onclick="modifyWait('${n}', -1)">-</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
+                </div>`).join('');
             if(subWindow) { subWindow.syncBoard(d); subWindow.toggleRank(rankVisible); subWindow.updateRank(Object.entries(scores).sort((a,b)=>b[1]-a[1])); }
         });
     }
@@ -232,10 +198,7 @@
         const q = document.getElementById('search').value.toLowerCase();
         let list = currentPool;
         if(q) list = list.filter(i => i.q.includes(q) || i.a.includes(q));
-        document.getElementById('quiz-list-area').innerHTML = list.map(i => `
-            <div onclick="applyQuiz('${i.q.replace(/'/g,"\\'")}', '${i.a.replace(/'/g,"\\'")}')" style="padding:10px; border-bottom:1px solid #eee; cursor:pointer; ${usedSet.has(i.q)?'opacity:0.3':''}">
-                <strong>${i.a}</strong><br><small>${i.q.substring(0,50)}...</small>
-            </div>`).join('');
+        document.getElementById('quiz-list-area').innerHTML = list.map(i => `<div onclick="applyQuiz('${i.q.replace(/'/g,"\\'")}', '${i.a.replace(/'/g,"\\'")}')" style="padding:10px; border-bottom:1px solid #eee; cursor:pointer; ${usedSet.has(i.q)?'opacity:0.3':''}"><strong>${i.a}</strong><br><small>${i.q.substring(0,50)}...</small></div>`).join('');
     }
 
     function applyQuiz(q, a) {
@@ -249,18 +212,18 @@
         db.ref().update({ status: "waiting", winner: "", correctList: null, wrongList: null, boardAnswers: null, finalReveal: false });
         document.getElementById('ans-hint').innerText = a;
         if(subWindow) subWindow.resetForNext();
-        sync(true);
-        renderList();
+        sync(true); renderList();
     }
 
     function startQuiz() {
         db.ref('status').set('active');
+        const speed = parseInt(document.getElementById('readSpeed').value);
         timer = setInterval(() => {
             if(revealed.length < currentQuiz.q.length) {
                 let n = 0; while(revealed.includes(n)) n++;
                 revealed.push(n); sync();
             } else { clearInterval(timer); }
-        }, 150);
+        }, speed);
     }
 
     function sync(forceHideSub = false) {
@@ -275,18 +238,12 @@
     }
 
     function judge(isOK, targetPlayer = null) {
-        const p = targetPlayer || curWinner;
-        if(!p) return;
+        const p = targetPlayer || curWinner; if(!p) return;
         db.ref('mode').once('value', snap => {
             const mode = snap.val();
             if(isOK) {
                 play('correct');
-                let bonus = 2;
-                if(mode === 'board') {
-                    if(correctCount === 0) bonus = 3;
-                    else if(correctCount === 1) bonus = 2;
-                    else bonus = 1;
-                }
+                let bonus = (mode === 'board') ? (correctCount === 0 ? 3 : (correctCount === 1 ? 2 : 1)) : 2;
                 db.ref('scores/' + p).transaction(s => (s||0) + bonus);
                 db.ref('correctList/' + p).set(true);
                 if(subWindow) subWindow.showBanner(p + " 正解！(+" + bonus + ")", "#2ecc71");
@@ -303,98 +260,64 @@
     }
 
     function removeBoard(p) { db.ref('boardAnswers/' + p).remove(); }
-
     function openType(t) {
-        play('type');
-        db.ref('status').set('active');
-        const m = { 
-            kanji:/[\u4E00-\u9FFF]/, hira:/[\u3040-\u309F]/, kana:/[\u30A0-\u30FF]/, num:/[0-9０-９]/, alp:/[a-zＡ-Ｚ]/i,
-            sym:/[！？、。：；／＿－＝＋＊＆％＄＃＠！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～「」『』【】（）ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/
-        };
-        Array.from(currentQuiz.q).forEach((c,i) => { if(m[t] && m[t].test(c)) if(!revealed.includes(i)) revealed.push(i); });
-        sync();
+        play('type'); db.ref('status').set('active');
+        const m = { kanji:/[\u4E00-\u9FFF]/, hira:/[\u3040-\u309F]/, kana:/[\u30A0-\u30FF]/, num:/[0-9０-９]/, alp:/[a-zＡ-Ｚ]/i, sym:/[！？、。：；／＿－＝＋＊＆％＄＃＠！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～「」『』【】（）ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/ };
+        Array.from(currentQuiz.q).forEach((c,i) => { if(m[t] && m[t].test(c)) if(!revealed.includes(i)) revealed.push(i); }); sync();
     }
-
     function openAnsChars() {
-        db.ref('status').set('active');
-        play('type');
+        db.ref('status').set('active'); play('type');
         const ansSet = new Set(Array.from(currentQuiz.a));
-        Array.from(currentQuiz.q).forEach((c,i) => { if(ansSet.has(c) || c === '〇' || c === '○') { if(!revealed.includes(i)) revealed.push(i); } });
-        sync();
+        Array.from(currentQuiz.q).forEach((c,i) => { if(ansSet.has(c) || c === '〇' || c === '○') { if(!revealed.includes(i)) revealed.push(i); } }); sync();
     }
-
     function resumeQuiz() { db.ref('status').set('active'); startQuiz(); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
     function openAll() { db.ref('status').set('active'); revealed = Array.from(currentQuiz.q).map((_,i)=>i); sync(); }
     function resetAll() { if(confirm("完全リセットしますか？")) db.ref().set({ status: "idle", mode: "push", rankVisible: true }); }
 
     function initPlayer() {
-        const btn = document.getElementById('remote-button');
-        const bUI = document.getElementById('board-input-ui');
-        const sArea = document.getElementById('player-status-area');
-        const ni = document.getElementById('p-name');
+        const btn = document.getElementById('remote-button'), bUI = document.getElementById('board-input-ui'), sArea = document.getElementById('player-status-area'), ni = document.getElementById('p-name');
         db.ref().on('value', snap => {
             const d = snap.val() || {}; const name = ni.value.trim();
             const w = (d.waits && d.waits[name]) || 0;
             document.getElementById('p-score').innerText = (d.scores && d.scores[name]) || 0;
             document.getElementById('p-wait').innerText = w > 0 ? "あと " + w + " 回休み" : "";
             if(d.winner === name && name !== "") {
-                if(d.mode === 'board') { bUI.style.display = 'block'; btn.style.display = 'none'; sArea.innerHTML = '<div class="turn-notice">✨ 解答権獲得！答えを入力してください ✨</div>';
-                } else { bUI.style.display = 'none'; btn.style.display = 'inline-block'; sArea.innerHTML = '<div class="turn-notice">✨ 解答権獲得！口頭で答えてください ✨</div>'; }
+                if(d.mode === 'board') { bUI.style.display = 'block'; btn.style.display = 'none'; sArea.innerHTML = '<div style="background:#fff3cd;padding:10px;border-radius:8px;border:2px solid #f39c12;">✨ 回答を入力 ✨</div>';
+                } else { bUI.style.display = 'none'; btn.style.display = 'inline-block'; sArea.innerHTML = '<div style="background:#fff3cd;padding:10px;border-radius:8px;border:2px solid #f39c12;">✨ 口頭で回答！ ✨</div>'; }
             } else { bUI.style.display = 'none'; btn.style.display = 'inline-block'; sArea.innerHTML = ''; }
-            // 押しボタンの有効化条件（勝者がいないときのみ押せる）
             btn.disabled = !(name && w === 0 && d.status === 'active' && !d.winner);
         });
     }
 
     function sendBoardAns() {
-        const name = document.getElementById('p-name').value.trim();
-        const text = document.getElementById('board-text').value.trim();
-        if(!text) return;
-        db.ref('boardAnswers/' + name).set(text);
-        db.ref().update({ status: "active", winner: "" }); 
+        const name = document.getElementById('p-name').value.trim(), text = document.getElementById('board-text').value.trim();
+        if(!text) return; db.ref('boardAnswers/' + name).set(text); db.ref().update({ status: "active", winner: "" }); 
         document.getElementById('board-text').value = "";
     }
-
     function pushBtn() {
-        const name = document.getElementById('p-name').value.trim();
-        if(!name) return alert("名前を入力！");
-        // Firebaseのwinnerをセット。成功した場合のみstatusをpushedにする
-        db.ref('winner').transaction(cur => { if(!cur) return name; return; }, (err, ok) => { 
-            if(ok) db.ref('status').set('pushed'); 
-        });
+        const name = document.getElementById('p-name').value.trim(); if(!name) return alert("名前を入力！");
+        db.ref('winner').transaction(cur => { if(!cur) return name; return; }, (err, ok) => { if(ok) db.ref('status').set('pushed'); });
     }
 
     function openSubWindow() {
         subWindow = window.open("", "QuizSub", "width=1200,height=800");
         subWindow.document.write(`<html><head><style>
             body{background:#000;color:#fff;font-family:sans-serif;margin:0;overflow:hidden;display:flex;}
-            #main-container{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;}
-            #rank-side{width:320px;background:#111;border-left:3px solid #333;padding:25px;display:block;}
-            #banner{display:none;font-size:5rem;padding:20px;background:#c0392b;position:absolute;top:0;width:100%;z-index:10;text-align:center;font-weight:bold;}
+            #main-container{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;}
+            #rank-side{width:320px;background:#111;border-left:3px solid #333;padding:25px;}
+            #banner{display:none;font-size:5rem;padding:20px;position:absolute;top:0;width:100%;z-index:10;text-align:center;font-weight:bold;}
             #text{font-size:3.5rem;line-height:1.4;width:90%;text-align:center;font-weight:bold;}
             #text span.hidden{visibility:hidden;}
             #ans{display:none;font-size:5rem;color:#f1c40f;border:10px solid #f1c40f;padding:20px;margin-top:25px;text-align:center;font-weight:bold;border-radius:20px;}
             #board-area{display:flex;flex-wrap:wrap;justify-content:center;margin-top:30px;gap:15px;}
             .rank-item{margin-bottom:12px;font-size:1.6rem;border-bottom:1px solid #444;padding-bottom:8px;display:flex;justify-content:space-between;}
         </style></head><body>
-            <div id="main-container">
-                <div id="banner"></div><div id="text"></div><div id="ans"></div><div id="board-area"></div>
-            </div>
+            <div id="main-container"><div id="banner"></div><div id="text"></div><div id="ans"></div><div id="board-area"></div></div>
             <div id="rank-side"><h2 style="color:#3498db;border-bottom:2px solid #555;">RANKING</h2><div id="rank-list"></div></div>
             <script>
-                const sounds = {
-                    push: new Audio('buzzer.mp3'), correct: new Audio('correct.mp3'),
-                    wrong: new Audio('wrong.mp3'), type: new Audio('type.mp3')
-                };
-                // 再生処理：currentTimeを0にリセットしてから再生することで、2回目以降も確実に鳴るように修正
-                window.play = (s) => { 
-                    if(sounds[s]) { 
-                        sounds[s].pause();
-                        sounds[s].currentTime = 0; 
-                        sounds[s].play().catch(e => console.log("Audio Error:", e)); 
-                    } 
-                };
+                const sounds = { push: new Audio('buzzer.mp3'), correct: new Audio('correct.mp3'), wrong: new Audio('wrong.mp3'), type: new Audio('type.mp3') };
+                window.play = (s) => { if(sounds[s]) { sounds[s].pause(); sounds[s].currentTime = 0; sounds[s].play().catch(()=>{}); } };
                 window.showBanner = (m,c) => { const b=document.getElementById('banner'); b.innerText=m; b.style.background=c; b.style.display='block'; setTimeout(()=>b.style.display='none',2000); };
                 window.reveal = (a,q) => { document.getElementById('ans').innerText=a; document.getElementById('ans').style.display='block'; document.getElementById('text').innerHTML=q; };
                 window.toggleRank = (v) => { document.getElementById('rank-side').style.display = v ? 'block' : 'none'; };
@@ -403,12 +326,9 @@
                     const area = document.getElementById('board-area');
                     if(d.mode === 'board' && d.boardAnswers) {
                         area.innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => {
-                            const isWrong = d.wrongList && d.wrongList[n];
-                            const isCorrect = d.correctList && d.correctList[n];
-                            const shouldShow = d.finalReveal || isWrong;
+                            const isWrong = d.wrongList && d.wrongList[n], isCorrect = d.correctList && d.correctList[n], shouldShow = d.finalReveal || isWrong;
                             return '<div style="background:#222;border:3px solid '+(isWrong?'#e74c3c':(isCorrect?'#2ecc71':'#555'))+';padding:20px;border-radius:15px;min-width:180px;text-align:center;position:relative;">'+
-                                   (isWrong?'<div style="position:absolute;top:5px;right:10px;color:#e74c3c;font-weight:bold;">×</div>':'')+
-                                   (isCorrect?'<div style="position:absolute;top:5px;right:10px;color:#2ecc71;font-weight:bold;">〇</div>':'')+
+                                   (isWrong?'<div style="position:absolute;top:5px;right:10px;color:#e74c3c;">×</div>':'')+(isCorrect?'<div style="position:absolute;top:5px;right:10px;color:#2ecc71;">〇</div>':'')+
                                    '<div style="font-size:1.2rem;color:#aaa;">'+n+'</div><div style="font-size:2.5rem;color:#f1c40f;font-weight:bold;">'+(shouldShow ? ans : "？？？")+'</div></div>';
                         }).join('');
                     } else { area.innerHTML = ""; }
