@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Max Winners Adj</title>
+    <title>QuizConsole Pro - Multi-Push & Dynamic Max</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -56,7 +56,7 @@
                             <option value="board">📝 ボードモード</option>
                         </select>
                         <div style="background:white; padding:5px 10px; border-radius:5px; border:1px solid #ccc; font-size:0.85rem;">
-                            最大正解者数: <input type="number" id="maxWinners" value="1" min="1" max="50" style="width:40px;" onchange="db.ref('maxWinners').set(parseInt(this.value))">
+                            次問の最大正解数: <input type="number" id="maxWinners" value="1" min="1" max="50" style="width:40px;">
                         </div>
                         <button onclick="toggleRanking()" style="cursor:pointer;">🏆 ランキング切替</button>
                     </div>
@@ -136,12 +136,12 @@
         anime: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTBRf9k4zS7Ht5s7GKejqT2d-cyWbDHd19DwTPmAzoHe40d9nV1cVu-RH565sIq9GbYmEKkzhpBytp/pub?output=csv",
         social: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTXVYOqHu_0VRIkiVK0RQO-ZWPZ6pHGqIw5VxBWdOlg3-HbP3q26gM0fVxTndREhjqbaxFzcjeuoMcE/pub?output=csv",
         life: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSTr7JL0lBCMLRBFi-CraPlJxzp4xrGD8RSnc8MSuoV3ORISo0iCFWMmI_FCtDlgkxwPqmv_TwAvufn/pub?output=csv",
-        sport: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSJYls3O8_98SKNWqx34c0V5HLIaXdxxA8v4E3c1iwrTFZBL1TSxzeem9AbKZKYfMkQEcu7bECcsgVo/pub?output=csv"
+        sport: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSJYls3O8_98SKNWqx34c0V5HLIaXdxxA8v4E3c1iwrTFZBL1TSzeem9AbKZKYfMkQEcu7bECcsgVo/pub?output=csv"
     };
 
     let masterData = { all: [] }, currentPool = [], usedSet = new Set(), currentQuiz = { q: "", a: "" }, revealed = [];
     let timer = null, subWindow = null, curWinner = "", lastStatus = "", rankVisible = true;
-    let correctCount = 0, currentMaxWinners = 1;
+    let correctCount = 0;
 
     function switchPage(role) {
         document.querySelectorAll('.page-section').forEach(el => el.style.display = 'none');
@@ -171,8 +171,6 @@
             document.getElementById('activePlayer').innerText = curWinner || "---";
             rankVisible = d.rankVisible !== false;
             correctCount = d.correctList ? Object.keys(d.correctList).length : 0;
-            currentMaxWinners = d.maxWinners || 1;
-            document.getElementById('maxWinners').value = currentMaxWinners;
 
             const bArea = document.getElementById('boardResults');
             if(d.mode === 'board' && d.boardAnswers) {
@@ -180,6 +178,7 @@
                 bArea.innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => `<div class="board-ans-item"><span><strong>${n}:</strong> ${ans}</span><div class="judge-btns-mini"><button style="background:var(--success);color:white;padding:6px 10px;border:none;border-radius:4px;" onclick="judge(true, '${n}')">〇</button><button style="background:var(--danger);color:white;padding:6px 10px;border:none;border-radius:4px;" onclick="judge(false, '${n}')">×</button><button style="background:#7f8c8d;color:white;padding:6px 10px;border:none;border-radius:4px;" onclick="removeBoard('${n}')">消去</button></div></div>`).join('');
             } else { bArea.style.display = 'none'; }
             
+            // 重要：statusがpushedに変化した瞬間だけでなく、同じ人が複数回押しても反応するようにlastPushTimeも監視
             if(d.status === "pushed" && lastStatus !== "pushed") { clearInterval(timer); play('push'); }
             lastStatus = d.status;
 
@@ -219,13 +218,19 @@
         currentQuiz = { q, a }; revealed = []; usedSet.add(q);
         document.getElementById('admin-q-full').innerText = q;
         document.getElementById('admin-a-full').innerText = a;
+        
+        // 設定された最大正解数をその問題の定員として送信
+        const maxVal = parseInt(document.getElementById('maxWinners').value) || 1;
 
         db.ref('waits').once('value', snap => {
             const w = snap.val() || {}, up = {};
             Object.entries(w).forEach(([n, v]) => { up[n] = Math.max(0, v - 1); });
             db.ref('waits').update(up);
         });
-        db.ref().update({ status: "waiting", winner: "", correctList: null, wrongList: null, boardAnswers: null, finalReveal: false });
+        db.ref().update({ 
+            status: "waiting", winner: "", correctList: null, wrongList: null, 
+            boardAnswers: null, finalReveal: false, maxWinners: maxVal 
+        });
         if(subWindow) subWindow.resetForNext();
         sync(true); renderList();
     }
@@ -256,22 +261,20 @@
         const p = targetPlayer || curWinner; if(!p) return;
         db.ref().once('value', snap => {
             const d = snap.val();
-            const mode = d.mode;
             const max = d.maxWinners || 1;
             
             if(isOK) {
                 play('correct');
                 let curCount = d.correctList ? Object.keys(d.correctList).length : 0;
-                let bonus = (mode === 'board') ? (curCount === 0 ? 3 : (curCount === 1 ? 2 : 1)) : 2;
+                let bonus = (d.mode === 'board') ? (curCount === 0 ? 3 : (curCount === 1 ? 2 : 1)) : 2;
                 db.ref('scores/' + p).transaction(s => (s||0) + bonus);
                 db.ref('correctList/' + p).set(true);
                 if(subWindow) subWindow.showBanner(p + " 正解！", "#2ecc71");
                 
-                // 正解者が最大数に達したら終了
                 if(curCount + 1 >= max) {
                     db.ref().update({ status: "idle", winner: "" });
                 } else {
-                    db.ref('winner').set(""); // 次の人が押せるように
+                    db.ref('winner').set(""); 
                 }
             } else {
                 play('wrong');
@@ -279,8 +282,8 @@
                 db.ref('waits/' + p).set(2);
                 db.ref('wrongList/' + p).set(true);
                 if(subWindow) subWindow.showBanner(p + " ×", "#e74c3c");
-                db.ref('winner').set(""); // 誤答でも次の人が押せるように
-                if(mode !== 'board' && (d.status === 'pushed')) db.ref('status').set('active');
+                db.ref('winner').set(""); 
+                if(d.mode !== 'board') db.ref('status').set('active');
             }
         });
     }
@@ -298,7 +301,7 @@
     function resumeQuiz() { db.ref('status').set('active'); startQuiz(); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
     function openAll() { db.ref('status').set('active'); revealed = Array.from(currentQuiz.q).map((_,i)=>i); sync(); }
-    function resetAll() { if(confirm("完全リセットしますか？")) db.ref().set({ status: "idle", mode: "push", rankVisible: true, maxWinners: 1 }); }
+    function resetAll() { if(confirm("完全リセットしますか？")) db.ref().set({ status: "idle", mode: "push", rankVisible: true }); }
 
     function initPlayer() {
         const btn = document.getElementById('remote-button'), bUI = document.getElementById('board-input-ui'), sArea = document.getElementById('player-status-area'), ni = document.getElementById('p-name');
@@ -322,8 +325,8 @@
                 bUI.style.display = 'none'; btn.style.display = 'inline-block'; 
                 sArea.innerHTML = isCorrected ? '<div style="color:var(--success);font-weight:bold;">✅ 正解済み</div>' : ''; 
             }
-            // ボタン有効条件：名前あり、休みなし、アクティブ状態、未回答、かつ誰も押していない
-            btn.disabled = !(name && w === 0 && d.status === 'active' && !d.winner && !isCorrected);
+            // 正解済みでも「音を鳴らすため」にボタンは押せるように。ただし解答権獲得は名前未登録や休み中以外。
+            btn.disabled = !(name && w === 0 && d.status === 'active' && !d.winner);
         });
     }
 
@@ -332,9 +335,27 @@
         if(!text) return; db.ref('boardAnswers/' + name).set(text); db.ref('winner').set(""); 
         document.getElementById('board-text').value = "";
     }
+    
     function pushBtn() {
         const name = document.getElementById('p-name').value.trim(); if(!name) return alert("名前を入力！");
-        db.ref('winner').transaction(cur => { if(!cur) return name; return; }, (err, ok) => { if(ok) db.ref('status').set('pushed'); });
+        db.ref().once('value', snap => {
+            const d = snap.val();
+            // すでに誰かが解答権を持っている場合は何もしない
+            if(d.winner) return;
+
+            // 重要：すでに正解している人が押した場合
+            if(d.correctList && d.correctList[name]) {
+                // 音だけを鳴らすために一時的にstatusを切り替えて戻す（ブザー再生用）
+                db.ref('status').set('idle');
+                setTimeout(() => db.ref('status').set('active'), 50);
+                return;
+            }
+
+            // 解答権未獲得者の通常処理
+            db.ref('winner').transaction(cur => { if(!cur) return name; return; }, (err, ok) => { 
+                if(ok) db.ref('status').set('pushed'); 
+            });
+        });
     }
 
     function openSubWindow() {
