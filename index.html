@@ -38,9 +38,10 @@
 <div id="admin-ui" class="main-layout" style="display:none;">
     <div class="container">
         <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <button style="background:#8e44ad; flex:2; height:50px; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;" onclick="openSubWindow()">💻 視聴者画面を起動</button>
+            <button style="background:#8e44ad; flex:1.5; height:50px; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;" onclick="openSubWindow()">💻 視聴者画面を起動</button>
             <button id="scoreToggleBtn" class="toggle-btn" style="flex:0.5;" onclick="toggleSubScore()">👁 スコア:ON</button>
-            <button style="background:var(--danger); flex:1; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="resetAllScores()">🚮 リセット</button>
+            <button style="background:#2c3e50; flex:1; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;" onclick="gameSet()">🏁 ゲームセット</button>
+            <button style="background:var(--danger); flex:0.7; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="resetAllScores()">🚮 リセット</button>
         </div>
 
         <div class="judge-panel">
@@ -132,8 +133,9 @@
 
     let masterData = { ori: [], ent: [], anime: [], social: [], life: [], sport: [], custom: [], all: [] };
     let usedQuizzes = new Set(), currentQuiz = { q: "", a: "" }, revealedIndexes = [];
+    let history = []; // 出題履歴用
     let isRunning = false, timer = null, subWindow = null, currentWinner = "", lastStatus = "idle", currentGenre = 'all', intervalTime = 150;
-    let isSubScoreVisible = true;
+    let isSubScoreVisible = true, currentScores = {};
 
     async function initRole(role) {
         document.getElementById("role-ui").style.display = "none";
@@ -189,6 +191,7 @@
     function applyQuiz(obj) {
         stopQuiz(); currentQuiz = obj; revealedIndexes = [];
         usedQuizzes.add(obj.q);
+        history.push(obj); // 履歴に追加
         reduceWaits();
         db.ref().update({ status: "idle", winner: "" });
         document.getElementById("adminAnswer").innerText = obj.a;
@@ -225,6 +228,13 @@
         if (subWindow && !subWindow.closed) subWindow.toggleScorePanel(isSubScoreVisible);
     }
 
+    function gameSet() {
+        if(confirm("ゲームセットとして視聴者画面に最終結果を表示しますか？")) {
+            stopQuiz();
+            if(subWindow) subWindow.showResultView(currentScores, history);
+        }
+    }
+
     function manualJudge(isCorrect) {
         if(!currentWinner) return;
         const pPts = parseInt(document.getElementById("plusPts").value);
@@ -259,13 +269,16 @@
             sym:/[！？、。：；／＿－＝＋＊＆％＄＃＠！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～「」『』【】（）ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/,
             maru:/[〇○●]/
         };
+        // ○ボタンと全開以外ではSEを鳴らす
+        if(t !== 'maru' && subWindow) subWindow.playTypeSound();
+
         Array.from(currentQuiz.q).forEach((c,i) => { if(m[t] && m[t].test(c)) if(!revealedIndexes.includes(i)) revealedIndexes.push(i); });
         syncDisplay(); db.ref("status").set("active");
     }
 
     function openAllCharacters() { revealedIndexes = Array.from(currentQuiz.q).map((_,i)=>i); syncDisplay(); db.ref("status").set("active"); }
     function addCustomQuiz() { const q = document.getElementById("customQ").value, a = document.getElementById("customA").value; if(q && a) { masterData.custom.unshift({q, a}); changeGenre('custom'); } }
-    function resetAllScores() { if(confirm("初期化しますか？")){ db.ref("scores").remove(); db.ref("waits").remove(); usedQuizzes.clear(); renderList(); } }
+    function resetAllScores() { if(confirm("初期化しますか？")){ db.ref("scores").remove(); db.ref("waits").remove(); usedQuizzes.clear(); history=[]; renderList(); } }
 
     function setupAdminFirebase() {
         db.ref().on("value", snap => {
@@ -276,6 +289,7 @@
         });
         db.ref("scores").on("value", snap => {
             const s = snap.val() || {};
+            currentScores = s;
             document.getElementById("admin-score-list").innerHTML = "<strong>🏆 スコア編集</strong>" + Object.entries(s).sort((a,b)=>b[1]-a[1]).map(([n,v]) => `<div style="display:flex;justify-content:space-between;margin-top:2px;"><span>${n}</span><input type="number" class="score-input" value="${v}" onchange="db.ref('scores/${n}').set(parseInt(this.value))"></div>`).join("");
             if(subWindow) subWindow.updateRanking(s);
         });
@@ -285,28 +299,53 @@
         subWindow = window.open("", "QuizSub", "width=1200,height=800");
         subWindow.document.write(`<html><head><style>
             body{background:#000;color:#fff;display:flex;font-family:sans-serif;margin:0;overflow:hidden;cursor:pointer;}
-            #main{flex:3;display:flex;flex-direction:column;justify-content:center;align-items:center;border-right:2px solid #333;}
+            #main{flex:3;display:flex;flex-direction:column;justify-content:center;align-items:center;border-right:2px solid #333;position:relative;}
             #ranking{flex:1;background:#111;padding:20px; transition: 0.3s; display: block;}
             #text{font-size:4rem;text-align:center;width:90%;display:flex;flex-wrap:wrap;justify-content:center;line-height:1.4;}
             #text span.hidden{visibility:hidden;}
             .banner{position:fixed;top:0;width:100%;background:#c0392b;font-size:5rem;text-align:center;padding:20px;z-index:10;}
             .ans-box{font-size:6rem;border:10px solid #f1c40f;padding:20px;border-radius:20px;margin-top:20px;display:none;color:#f1c40f;}
+            #result-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;z-index:100;display:none;padding:40px;box-sizing:border-box;overflow-y:auto;}
+            .res-title{font-size:3rem;color:#f1c40f;border-bottom:3px solid #f1c40f;margin-bottom:20px;}
+            .res-item{margin-bottom:15px;border-bottom:1px solid #333;padding-bottom:10px;}
+            .res-q{font-size:1.2rem;color:#ccc;}
+            .res-a{font-size:1.8rem;color:#fff;font-weight:bold;}
         </style></head><body onclick="initAudio()">
             <div id="init-msg" style="position:fixed;bottom:20px;width:100%;text-align:center;color:#666;">🔈 クリックして音声有効化</div>
             <div id="banner" style="display:none;" class="banner"></div>
-            <div id="main"><div id="text"></div><div id="ans" class="ans-box"></div></div>
+            <div id="main">
+                <div id="text"></div><div id="ans" class="ans-box"></div>
+                <div id="result-screen">
+                    <div class="res-title">🏁 FINAL RESULT</div>
+                    <div id="final-ranking" style="font-size:2.5rem; margin-bottom:30px;"></div>
+                    <div class="res-title">📚 QUIZ REVIEW</div>
+                    <div id="quiz-history"></div>
+                </div>
+            </div>
             <div id="ranking"><h2>RANKING</h2><div id="rank-list"></div></div>
             <script>
                 let audioReady = false;
-                const snd = { buzzer: new Audio("./buzzer.mp3"), correct: new Audio("./correct.mp3"), wrong: new Audio("./wrong.mp3") };
+                const snd = { 
+                    buzzer: new Audio("./buzzer.mp3"), 
+                    correct: new Audio("./correct.mp3"), 
+                    wrong: new Audio("./wrong.mp3"),
+                    type: new Audio("./type.mp3")
+                };
                 window.initAudio = () => { if(!audioReady){ Object.values(snd).forEach(s=>{s.play().then(()=>s.pause());}); audioReady=true; document.getElementById('init-msg').style.display='none'; } };
+                window.playTypeSound = () => { if(audioReady) { snd.type.currentTime=0; snd.type.play(); } };
                 window.showWinner = (n) => { if(audioReady) snd.buzzer.play(); document.getElementById('banner').innerText = n + " 解答中！"; document.getElementById('banner').style.display='block'; };
                 window.showResult = (m,c,s) => { if(audioReady) snd[s].play(); document.getElementById('banner').style.background=c; document.getElementById('banner').innerText=m; };
                 window.showFlash = (m,c,s) => { if(audioReady) snd[s].play(); };
                 window.revealAnswer = (a,q) => { document.getElementById('text').innerHTML=q; document.getElementById('ans').innerText=a; document.getElementById('ans').style.display='block'; };
                 window.updateRanking = (s) => { document.getElementById('rank-list').innerHTML = Object.entries(s).sort((a,b)=>b[1]-a[1]).map(([n,v])=>'<div>'+n+': '+v+'pt</div>').join(''); };
-                window.resetForNext = () => { document.getElementById('banner').style.display='none'; document.getElementById('ans').style.display='none'; };
+                window.resetForNext = () => { document.getElementById('banner').style.display='none'; document.getElementById('ans').style.display='none'; document.getElementById('result-screen').style.display='none'; };
                 window.toggleScorePanel = (visible) => { document.getElementById('ranking').style.display = visible ? 'block' : 'none'; };
+                
+                window.showResultView = (scores, history) => {
+                    document.getElementById('result-screen').style.display = 'block';
+                    document.getElementById('final-ranking').innerHTML = Object.entries(scores).sort((a,b)=>b[1]-a[1]).map(([n,v],i)=>'<div>'+(i+1)+'位: '+n+' ('+v+'pt)</div>').join('');
+                    document.getElementById('quiz-history').innerHTML = history.map((h,i)=>'<div class="res-item"><div class="res-q">Q.'+(i+1)+' '+h.q+'</div><div class="res-a">A. '+h.a+'</div></div>').join('');
+                };
             <\/script></body></html>`);
         setTimeout(() => subWindow.toggleScorePanel(isSubScoreVisible), 500);
     }
@@ -334,4 +373,3 @@
 </script>
 </body>
 </html>
-
