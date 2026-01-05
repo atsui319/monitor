@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - The Perfect Version 1.5</title>
+    <title>QuizConsole Pro - The Perfect Version 1.6</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -26,13 +26,11 @@
         #remote-button:not(:disabled) { background: #7f1d1d; color: white; border-color: #991b1b; }
         .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; }
         
-        /* 視認性修正部分 */
         #admin-info-box { background:#111; padding:15px; border-radius:8px; border:1px solid #333; color: #fff; }
         #admin-q-full { display: block; margin-top: 5px; padding: 10px; background: #000; color: #fff; border-radius: 6px; border: 1px solid #444; font-weight: bold; line-height: 1.4; }
         #admin-a-full { color: #ff5c5c; font-weight: bold; font-size: 1.3rem; }
         .label-text { color: #aaa; font-weight: bold; margin-right: 5px; }
         .speed-control { display:flex; align-items:center; gap:10px; margin-top:10px; background:#1f2937; padding:12px; border-radius:8px; color: #fff; }
-
         .history-item { padding: 8px; border-bottom: 1px solid #222; font-size: 0.85rem; }
         #player-gameover { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); color: white; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
     </style>
@@ -110,7 +108,7 @@
                 <div id="quiz-list-area" style="flex:1;"></div>
             </div>
             <div class="sidebar-section" style="flex:1">
-                <h3 style="margin:0 0 5px 0; font-size:1rem; color:var(--test);">🕒 出題履歴</h3>
+                <h3 style="margin:0 0 5px 0; font-size:1rem; color:var(--test);">🕒 出題履歴（更新で消去）</h3>
                 <div id="history-list-area" style="flex:1;"></div>
             </div>
         </div>
@@ -142,6 +140,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     
+    // 履歴(quizHistory)はFirebase同期から除外（ローカル変数のみ）
     let masterData = { all: [] }, activeGenre = 'all', usedSet = new Set(), currentQuiz = { q: "", a: "" }, revealed = [], quizHistory = [];
     let timer = null, subWindow = null, lastStatus = "", isPlayerLocked = false;
 
@@ -162,11 +161,7 @@
 
     async function initAdmin() {
         db.ref('usedSet').on('value', s => { usedSet = new Set(s.val() || []); renderList(); });
-        db.ref('quizHistory').on('value', s => { 
-            quizHistory = s.val() || []; 
-            updateHistoryUI(); 
-        });
-
+        
         const tabs = document.getElementById('genre-tabs');
         tabs.innerHTML = '<button class="btn-genre active" onclick="setGenre(\'all\')">全</button>' + Object.keys(URLS).map(k => `<button class="btn-genre" onclick="setGenre('${k}')">${k}</button>`).join('');
         
@@ -238,8 +233,11 @@
         revealed = []; 
         usedSet.add(q); 
         db.ref('usedSet').set([...usedSet]);
-        const newHistory = [...quizHistory, {q, a}];
-        db.ref('quizHistory').set(newHistory);
+        
+        // 履歴はローカルのみに追加
+        quizHistory.push({q, a});
+        updateHistoryUI();
+
         document.getElementById('admin-q-full').innerText = q; 
         document.getElementById('admin-a-full').innerText = a; 
         db.ref().update({ status: "waiting", winner: "", correctList: null, wrongList: null, boardAnswers: null, typing: null, finalReveal: false, isGameSet: false }); 
@@ -280,7 +278,16 @@
 
     function resumeQuiz() { db.ref('status').set('active'); if(revealed.length < currentQuiz.q.length) startQuiz(); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
-    function resetAll() { if (confirm("すべて消去しますか？")) db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [], quizHistory: [] }); }
+    
+    function resetAll() { 
+        if (confirm("すべて消去しますか？")) {
+            // Firebaseをリセット
+            db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [] }); 
+            // 履歴（ローカル変数）をリセット
+            quizHistory = [];
+            updateHistoryUI();
+        }
+    }
 
     function lockName() { const n = document.getElementById('p-name').value.trim(); if(!n) return alert("名前を入力してください"); isPlayerLocked = true; document.getElementById('p-name').disabled = true; document.getElementById('p-lock-btn').style.display = 'none'; document.getElementById('locked-name-display').style.display = 'block'; document.getElementById('current-player-name').innerText = n; }
     function initPlayer() { 
