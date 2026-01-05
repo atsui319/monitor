@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - The Perfect Version 1.7</title>
+    <title>QuizConsole Pro - The Perfect Version 1.8</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -22,6 +22,16 @@
         .btn-genre { padding: 6px; font-size: 0.7rem; cursor: pointer; border: 1px solid #333; background: #111827; color: #d1d5db; border-radius: 4px; }
         .btn-genre.active { background: var(--primary); color: white; }
         .mgr-item { display: flex; flex-direction: column; padding: 8px; border-bottom: 1px solid #222; font-size: 0.9rem; gap: 5px; }
+        
+        /* 判定ボタンのデザイン強化 */
+        .btn-ok { background: #16a34a !important; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; }
+        .btn-ng { background: #dc2626 !important; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; }
+        
+        /* 管理画面の回答リストの色分け */
+        .board-mgr-item { padding: 10px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s; }
+        .board-mgr-item.is-correct { background: rgba(34, 197, 94, 0.2); border-left: 5px solid #22c55e; }
+        .board-mgr-item.is-wrong { background: rgba(239, 68, 68, 0.2); border-left: 5px solid #ef4444; }
+
         #remote-button { width: 180px; height: 180px; border-radius: 50%; font-size: 2rem; font-weight: bold; cursor: pointer; border: 8px solid #333; }
         #remote-button:not(:disabled) { background: #7f1d1d; color: white; border-color: #991b1b; }
         .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; }
@@ -71,8 +81,8 @@
                         <div id="board-list-inner"></div>
                     </div>
                     <div style="display:flex; gap:10px; margin-top:10px;">
-                        <button style="flex:1; height:60px; background:#166534; color:white; font-size:2rem; border-radius:8px; border:none;" onclick="judge(true)">⭕</button>
-                        <button style="flex:1; height:60px; background:#7f1d1d; color:white; font-size:2rem; border-radius:8px; border:none;" onclick="judge(false)">❌</button>
+                        <button class="btn-ok" style="flex:1; height:70px; font-size:2.5rem;" onclick="judge(true)">⭕</button>
+                        <button class="btn-ng" style="flex:1; height:70px; font-size:2.5rem;" onclick="judge(false)">❌</button>
                     </div>
                     <div style="margin-top:8px; display:flex; gap:5px;">
                         <button onclick="resumeQuiz()" style="flex:1; padding:10px; font-weight:bold;">▶ 続行</button>
@@ -183,18 +193,37 @@
                 const w = d.waits?.[n] || 0;
                 return `<div class="mgr-item"><div style="display:flex;justify-content:space-between"><span><b>${hEsc(n)}</b>: ${v}pt</span><button onclick="removePlayer('${n}')">🗑️</button></div><div><button onclick="modifyScore('${n}',1)">+</button><button onclick="modifyScore('${n}',-1)">-</button> <span style="color:red">休${w}</span><button onclick="modifyWait('${n}',1)">+</button><button onclick="modifyWait('${n}',-1)">-</button></div></div>`;
             }).join('');
+            
             const statusLabel = document.getElementById('status-label');
             if(d.status === 'active') { statusLabel.innerText = "🟢 受付中"; statusLabel.style.background = "var(--success)"; }
             else if(d.status === 'pushed') { statusLabel.innerText = "🔴 解答待ち"; statusLabel.style.background = "var(--danger)"; }
             else { statusLabel.innerText = "⚪ 待機中"; statusLabel.style.background = "#777"; }
+            
             document.getElementById('activePlayer').innerText = d.winner ? "🎤 " + d.winner : (d.mode === 'all_board' && d.status !== 'waiting' ? "🖊 全員解答中" : "待機中");
             if(d.status === "pushed" && lastStatus !== "pushed") { clearInterval(timer); requestSound('push'); }
             lastStatus = d.status;
+            
+            // 回答リストの描画（色分け対応）
             const bArea = document.getElementById('boardResults');
             if((d.mode === 'board' || d.mode === 'all_board') && d.boardAnswers) {
                 bArea.style.display = 'block';
-                document.getElementById('board-list-inner').innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => `<div style="padding:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between;"><span>${hEsc(n)}: ${hEsc(ans)}</span><div><button onclick="judge(true, '${n}')">〇</button><button onclick="judge(false, '${n}')">×</button></div></div>`).join('');
+                document.getElementById('board-list-inner').innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => {
+                    const sn = safeName(n);
+                    const isCorrect = d.correctList?.[sn];
+                    const isWrong = d.wrongList?.[sn];
+                    let cls = "board-mgr-item";
+                    if(isCorrect) cls += " is-correct";
+                    if(isWrong) cls += " is-wrong";
+                    return `<div class="${cls}">
+                        <span><b>${hEsc(n)}</b>: ${hEsc(ans)}</span>
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn-ok" style="padding:5px 12px;" onclick="judge(true, '${n}')">〇</button>
+                            <button class="btn-ng" style="padding:5px 12px;" onclick="judge(false, '${n}')">×</button>
+                        </div>
+                    </div>`;
+                }).join('');
             } else bArea.style.display = 'none';
+
             if(subWindow) { 
                 subWindow.syncBoard(d); 
                 subWindow.toggleRank(d.rankVisible !== false); 
@@ -256,26 +285,14 @@
             const sn = safeName(p); const pt = parseInt(document.getElementById('currentPoint').value) || 1;
             if(isOK) { db.ref('scores/'+sn).transaction(s => (s||0)+pt); db.ref('correctList/'+sn).set(true); }
             else { db.ref('scores/'+sn).transaction(s => (s||0)-1); db.ref('waits/'+sn).set(2); db.ref('wrongList/'+sn).set(true); }
-            if(d.mode !== 'all_board') db.ref().update({ winner: "", status: "active" });
+            if(d.mode !== 'all_board' && !targetPlayer) db.ref().update({ winner: "", status: "active" });
         });
     }
 
     function resumeQuiz() { db.ref('status').set('active'); if(revealed.length < currentQuiz.q.length) startQuiz(); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
-    
-    // ゲームセット時にも履歴をクリア
-    function gameSet() {
-        db.ref('isGameSet').set(true);
-        quizHistory = [];
-        updateHistoryUI();
-    }
-
-    function resetAll() { 
-        if (confirm("すべて消去しますか？")) {
-            db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [] }); 
-            quizHistory = []; updateHistoryUI();
-        }
-    }
+    function gameSet() { db.ref('isGameSet').set(true); quizHistory = []; updateHistoryUI(); }
+    function resetAll() { if (confirm("すべて消去しますか？")) { db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [] }); quizHistory = []; updateHistoryUI(); } }
 
     function lockName() { const n = document.getElementById('p-name').value.trim(); if(!n) return alert("名前を入力してください"); isPlayerLocked = true; document.getElementById('p-name').disabled = true; document.getElementById('p-lock-btn').style.display = 'none'; document.getElementById('locked-name-display').style.display = 'block'; document.getElementById('current-player-name').innerText = n; }
     function initPlayer() { 
@@ -284,12 +301,7 @@
             if(!isPlayerLocked) return; 
             const d = snap.val() || {}; const name = document.getElementById('p-name').value.trim(); const sn = safeName(name); const score = d.scores?.[sn] || 0; 
             document.getElementById('p-score').innerText = score; 
-            if(d.isGameSet) { 
-                goS.style.display = 'flex'; document.getElementById('final-p-score').innerText = score; 
-                const scoreEntries = Object.entries(d.scores || {}).sort((a,b)=>b[1]-a[1]); 
-                const rank = scoreEntries.findIndex(e => e[0] === sn) + 1; 
-                document.getElementById('final-rank-text').innerText = `あなたは ${scoreEntries.length} 人中 ${rank} 位です！`; 
-            } else { goS.style.display = 'none'; } 
+            if(d.isGameSet) { goS.style.display = 'flex'; document.getElementById('final-p-score').innerText = score; const scoreEntries = Object.entries(d.scores || {}).sort((a,b)=>b[1]-a[1]); const rank = scoreEntries.findIndex(e => e[0] === sn) + 1; document.getElementById('final-rank-text').innerText = `あなたは ${scoreEntries.length} 人中 ${rank} 位です！`; } else { goS.style.display = 'none'; } 
             const w = (d.waits && d.waits[sn]) || 0; const isCorrected = d.correctList && d.correctList[sn]; const isWinner = (d.winner === name); 
             const showBoard = (d.mode === 'all_board' && d.status !== 'waiting') || (isWinner && (d.mode === 'board' || d.mode === 'all_board')); 
             bUI.style.display = showBoard ? 'block' : 'none'; 
@@ -334,7 +346,7 @@
                     const players = Array.from(new Set([...Object.keys(d.boardAnswers || {}), ...Object.keys(d.typing || {})]));
                     area.innerHTML = players.map(n => {
                         const ans = d.boardAnswers?.[n]; const isTyping = d.typing?.[n];
-                        const isCorrect = d.correctList?.[n], isWrong = d.wrongList?.[n];
+                        const isCorrect = d.correctList?.[safeName(n)], isWrong = d.wrongList?.[safeName(n)];
                         const show = d.finalReveal || isWrong;
                         let content = show ? (ans || \"\") : (ans ? \"？？？\" : (isTyping ? \"<span style='color:#3498db;animation:blink 1s infinite'>🖊 入力中...</span>\" : \"\"));
                         if(!content && !isTyping) return \"\";
