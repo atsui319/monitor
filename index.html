@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - The Perfect Version</title>
+    <title>QuizConsole Pro - The Perfect Version1.2</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -39,294 +39,36 @@
     --test: #8e7dff;
 }
 
-/* 全体背景 */
-body {
-    background: var(--bg);
-    color: #e5e7eb;
-}
+body { background: var(--bg); color: #e5e7eb; }
+.container, .sidebar-section { background: #161a22; color: #e5e7eb; box-shadow: 0 4px 20px rgba(0,0,0,0.6); border: 1px solid #2a2f3a; }
+.admin-flex { background: var(--bg); }
+#display { background: #000; border: 4px solid #222; color: #fff; }
+#display span { border-bottom: 2px solid #333; }
+#full-mgr-list, #quiz-list-area, #history-list-area { background: #0d1117; border: 1px solid #222; }
+.quiz-item, .history-item { background: #0d1117; color: #e5e7eb; border-bottom: 1px solid #222; padding: 8px; }
+.quiz-item:hover, .history-item:hover { background: #1f2937; }
+button { background: #1f2937; color: #e5e7eb; border: 1px solid #333; cursor: pointer; }
+button:hover { background: #2b3548; }
+.btn-genre { background: #111827; color: #d1d5db; border: 1px solid #333; }
+.btn-genre.active { background: var(--primary); color: #fff; }
+input, select { background: #0d1117; color: #e5e7eb; border: 1px solid #333; }
+input::placeholder { color: #6b7280; }
+#player-ui .container { background: #111827; }
+#remote-button { background: #7f1d1d; color: #fff; border-color: #991b1b; }
+#remote-button:disabled { background: #1f2937; color: #6b7280; border-color: #333; }
 
-/* 共通カード */
-.container,
-.sidebar-section {
-    background: #161a22;
-    color: #e5e7eb;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-    border: 1px solid #2a2f3a;
-}
+#admin-q-full { display: block; margin-top: 4px; padding: 8px 10px; background: #000000 !important; color: #ffffff !important; border-radius: 6px; font-weight: bold; line-height: 1.4; }
+#admin-a-full { color: #ff4d4d !important; font-weight: bold; font-size: 1.1rem; }
 
-/* 管理画面 左右構成 */
-.admin-flex {
-    background: var(--bg);
-}
+#boardResults { background: #111827 !important; border: 2px solid #334155 !important; color: #e5e7eb !important; }
+#board-list-inner { background: transparent !important; color: #e5e7eb !important; }
+.board-ans-item { background: #1f2937; color: #e5e7eb; border-left: 5px solid #555; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
 
-/* 問題表示 */
-#display {
-    background: #000;
-    border: 4px solid #222;
-    color: #fff;
-}
-
-#display span {
-    border-bottom: 2px solid #333;
-}
-
-/* サイドバーリスト */
-#full-mgr-list,
-#quiz-list-area {
-    background: #0d1117;
-    border: 1px solid #222;
-}
-
-/* 問題リスト項目 */
-.quiz-item {
-    background: #0d1117;
-    color: #e5e7eb;
-}
-.quiz-item:hover {
-    background: #1f2937;
-}
-
-/* ボタン共通 */
-button {
-    background: #1f2937;
-    color: #e5e7eb;
-    border: 1px solid #333;
-}
-button:hover {
-    background: #2b3548;
-}
-
-/* ジャンルボタン */
-.btn-genre {
-    background: #111827;
-    color: #d1d5db;
-    border: 1px solid #333;
-}
-.btn-genre.active {
-    background: var(--primary);
-    color: #fff;
-}
-
-/* ステータス枠 */
-.status-badge {
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
-}
-
-/* 入力欄 */
-input, select {
-    background: #0d1117;
-    color: #e5e7eb;
-    border: 1px solid #333;
-}
-input::placeholder {
-    color: #6b7280;
-}
-
-/* 回答者画面 */
-#player-ui .container {
-    background: #111827;
-}
-
-/* PUSHボタン */
-#remote-button {
-    background: #7f1d1d;
-    color: #fff;
-    border-color: #991b1b;
-}
-#remote-button:disabled {
-    background: #1f2937;
-    color: #6b7280;
-    border-color: #333;
-}
-
-/* ゲームオーバー */
-#player-gameover {
-    background: rgba(0,0,0,0.97);
-}
-/* =========================
-   管理者：現在の問題 表示
-   ========================= */
-
-/* 親コンテナ（インライン style="background:#eee" を上書き） */
-#admin-q-full,
-#admin-a-full {
-    background: transparent !important;
-}
-
-/* 問題文：黒背景＋白文字 */
-#admin-q-full {
-    display: block;
-    margin-top: 4px;
-    padding: 8px 10px;
-    background: #000000 !important;
-    color: #ffffff !important;
-    border-radius: 6px;
-    font-weight: bold;
-    line-height: 1.4;
-}
-
-/* 正解：赤文字（背景なし） */
-#admin-a-full {
-    color: #ff4d4d !important;
-    font-weight: bold;
-    font-size: 1.1rem;
-}
-
-        /* =========================
-   管理者：回答リストダークモード
-   ========================= */
-#boardResults {
-    background: #111827 !important;
-    border: 2px solid #334155 !important;
-    color: #e5e7eb !important;
-}
-
-#boardResults strong {
-    color: #9ca3af !important;
-}
-
-#board-list-inner {
-    background: transparent !important;
-    color: #e5e7eb !important;
-}
-
-.board-ans-item {
-    background: #1f2937;
-    color: #e5e7eb;
-    border-left: 5px solid #555;
-    padding: 6px 10px;
-    border-radius: 6px;
-    margin-bottom: 6px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.board-ans-item button {
-    background: #2b3548;
-    color: #e5e7eb;
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 0.8rem;
-}
-
-.board-ans-item button:hover {
-    background: #3b4252;
-}
-
-/* =========================
-   管理者：正誤判定＆操作エリア
-   ========================= */
-
-/* 正誤判定エリア全体（黄色枠の中） */
-#admin-ui > .admin-flex .container > div[style*="fff3cd"] {
-    background: #0f172a !important;
-    border: 2px solid #334155 !important;
-    color: #e5e7eb;
-}
-
-/* 正解（⭕）ボタン */
-#admin-ui button[onclick*="judge(true)"] {
-    background: #166534 !important;
-    border: none;
-    color: #ffffff;
-}
-#admin-ui button[onclick*="judge(true)"]:hover {
-    background: #22c55e !important;
-}
-
-/* 不正解（❌）ボタン */
-#admin-ui button[onclick*="judge(false)"] {
-    background: #7f1d1d !important;
-    border: none;
-    color: #ffffff;
-}
-#admin-ui button[onclick*="judge(false)"]:hover {
-    background: #ef4444 !important;
-}
-
-/* 続行・答え公開エリア */
-#admin-ui button[onclick="resumeQuiz()"],
-#admin-ui button[onclick="revealAnswer()"] {
-    background: #1f2937 !important;
-    color: #e5e7eb;
-    border: 1px solid #374151;
-}
-
-/* 答え公開を強調 */
-#admin-ui button[onclick="revealAnswer()"] {
-    background: #4c1d95 !important;
-    border: none;
-    color: #ffffff;
-}
-/* =========================
-   管理者：問題文・答え・読上げ操作エリア
-   ========================= */
-
-/* 問題文＋正解の親エリア */
-#admin-ui span#admin-q-full,
-#admin-ui span#admin-a-full {
-    background: transparent !important;
-}
-
-/* 問題文：黒背景＋白文字 */
-#admin-q-full {
-    display: block;
-    margin-top: 6px;
-    padding: 10px 12px;
-    background: #000000 !important;
-    color: #ffffff !important;
-    border-radius: 8px;
-    font-weight: bold;
-    line-height: 1.5;
-}
-
-/* 正解：赤文字（背景なし） */
-#admin-a-full {
-    color: #ff4d4d !important;
-    font-weight: bold;
-    font-size: 1.1rem;
-}
-
-/* 問題文・正解を含むボックス全体 */
-#admin-ui .container > div:has(#admin-q-full) {
-    background: #111827 !important;
-    border: 1px solid #374151;
-    border-radius: 10px;
-}
-
-/* =========================
-   読み上げ速度調節エリア
-   ========================= */
-
-#admin-ui input[type="range"] {
-    accent-color: #4aa3ff;
-}
-
-/* 「速度」ラベル文字 */
-#admin-ui span,
-#admin-ui label {
-    color: #e5e7eb;
-}
-
-/* 読み上げ操作エリア全体 */
-#admin-ui button[onclick="startQuiz()"] {
-    background: #2563eb !important;
-    color: #ffffff !important;
-    border: none;
-}
-#admin-ui button[onclick="startQuiz()"]:hover {
-    background: #3b82f6 !important;
-}
-
-/* 読み上げエリアの親コンテナ */
-#admin-ui .container > div:has(#readSpeed) {
-    background: #0f172a !important;
-    border: 1px solid #334155;
-    border-radius: 10px;
-    color: #e5e7eb;
-}
+#admin-ui > .admin-flex .container > div[style*="fff3cd"] { background: #0f172a !important; border: 2px solid #334155 !important; color: #e5e7eb; }
+#admin-ui button[onclick*="judge(true)"] { background: #166534 !important; border: none; color: #ffffff; }
+#admin-ui button[onclick*="judge(false)"] { background: #7f1d1d !important; border: none; color: #ffffff; }
+#admin-ui button[onclick="revealAnswer()"] { background: #4c1d95 !important; border: none; color: #ffffff; }
+#admin-ui button[onclick="startQuiz()"] { background: #2563eb !important; color: #ffffff !important; border: none; }
 
     </style>
 </head>
@@ -392,15 +134,22 @@ input::placeholder {
             </div>
         </div>
         <div class="sidebar">
-            <div class="sidebar-section" style="height:40%">
+            <div class="sidebar-section" style="height:30%">
                 <h3 style="margin:0; font-size:1rem; color:var(--primary);">👤 プレイヤー管理</h3>
                 <div id="full-mgr-list"></div>
             </div>
-            <div class="sidebar-section" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+            <div class="sidebar-section" style="height:40%; overflow: hidden; display: flex; flex-direction: column;">
                 <h3 style="margin:0; font-size:1rem; color:var(--primary);">📚 問題検索</h3>
                 <div id="genre-tabs" style="display:flex; flex-wrap:wrap; gap:2px; margin:5px 0;"></div>
                 <input type="text" id="search" placeholder="キーワード検索..." style="width:100%; padding:8px; box-sizing:border-box; margin-bottom:5px;" oninput="renderList()">
-                <div id="quiz-list-area" style="flex: 1; overflow-y: auto; border: 1px solid #eee; background: #fff; padding: 5px;"></div>
+                <div id="quiz-list-area" style="flex: 1; overflow-y: auto;"></div>
+            </div>
+            <div class="sidebar-section" style="height:30%; overflow: hidden; display: flex; flex-direction: column;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; font-size:1rem; color:var(--primary);">📜 出題履歴</h3>
+                    <button onclick="clearHistory()" style="font-size:0.7rem; padding:2px 5px; background:var(--danger); color:white; border:none; border-radius:4px;">全消去</button>
+                </div>
+                <div id="history-list-area" style="flex: 1; overflow-y: auto; margin-top:5px; font-size:0.8rem;"></div>
             </div>
         </div>
     </div>
@@ -434,7 +183,6 @@ input::placeholder {
     let masterData = { all: [] }, activeGenre = 'all', usedSet = new Set(), currentQuiz = { q: "", a: "" }, revealed = [], history = [];
     let timer = null, subWindow = null, lastStatus = "", isPlayerLocked = false;
 
-   // --- 修正箇所：URLSオブジェクト ---
 const URLS = {
     ori: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSFuFjp8CnBMqfdRPKbQ_FPC6zWwgdQBVdTDsdWTHbBN92vXADxbVTmHdLm_C3Yn-Eeu5ZWm9WXRb0c/pub?output=csv",
     ent: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjKfK1zTkytDnO1HiVRHa0N79VJncU_IXC3uv8Q2EBvBIm5mRPw82ie-widupSvvlR1vQdkVeeIIMM/pub?output=csv",
@@ -442,7 +190,6 @@ const URLS = {
     social: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTXVYOqHu_0VRIkiVK0RQO-ZWPZ6pHGqIw5VxBWdOlg3-HbP3q26gM0fVxTndREhjqbaxFzcjeuoMcE/pub?output=csv",
     life: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSTr7JL0lBCMLRBFi-CraPlJxzp4xrGD8RSnc8MSuoV3ORISo0iCFWMmI_FCtDlgkxwPqmv_TwAvufn/pub?output=csv",
     sport: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSJYls3O8_98SKNWqx34c0V5HLIaXdxxA8v4E3c1iwrTFZBL1TSxzeem9AbKZKYfMkQEcu7bECcsgVo/pub?output=csv",
-    // ここにパッチ：文系学問を追加
     humanities: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTTUKra8YsSzkZHvm7QRzKeUT6KBi90JHU99B8AK2YiFd2hpxPfKQNCcrUiBVn6BTyPUWqNwJEUVsgD/pub?output=csv"
 };
 
@@ -487,47 +234,92 @@ const URLS = {
                 bArea.style.display = 'block';
                 document.getElementById('board-list-inner').innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => `<div class="board-ans-item" style="border-left:5px solid ${d.correctList?.[n]?'green':(d.wrongList?.[n]?'red':'#ccc')}"><span>${hEsc(n)}: ${hEsc(ans)}</span><div><button onclick="judge(true, '${n}')">〇</button><button onclick="judge(false, '${n}')">×</button></div></div>`).join('');
             } else bArea.style.display = 'none';
+            
+            // 履歴更新の監視
+            if(d.history) { history = d.history; renderHistory(); }
+            
             if(subWindow) { subWindow.syncBoard(d); subWindow.toggleRank(d.rankVisible !== false); subWindow.updateRank(scoreEntries); if(d.isGameSet) subWindow.showResult(scoreEntries, history); else subWindow.hideResult(); }
         });
     }
 
-   // プレイヤー削除（キック）のコアロジック
 function removePlayer(n) {
     if(confirm(`${n} を削除（キック）しますか？`)) {
         const sn = safeName(n);
-        // Firebase上の全関連ノードを削除
         db.ref('scores/' + sn).remove();
         db.ref('waits/' + sn).remove();
         db.ref('boardAnswers/' + sn).remove();
         db.ref('typing/' + sn).remove();
         db.ref('correctList/' + sn).remove();
         db.ref('wrongList/' + sn).remove();
-        // 削除後、回答者画面は自動的に「待機中」などの初期状態に戻ります
     }
 }
     function modifyScore(n, v) { db.ref('scores/'+safeName(n)).transaction(s => (s||0)+v); }
     function modifyWait(n, v) { db.ref('waits/'+safeName(n)).transaction(w => Math.max(0, (w||0)+v)); }
     function toggleRanking() { db.ref('rankVisible').transaction(v => v === undefined ? false : !v); }
     function setGenre(g) { activeGenre = g; renderList(); }
+    function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } return array; }
+
     function renderList() {
         const s = document.getElementById('search').value.toLowerCase();
         const area = document.getElementById('quiz-list-area');
         let list = masterData[activeGenre] || [];
-        if(s) list = list.filter(i => i.q.includes(s) || i.a.includes(s));
-        else list = [...list].sort(() => Math.random() - 0.5).slice(0, 50);
-        area.innerHTML = list.map(i => `<div class="quiz-item" onclick="applyQuiz('${hEsc(i.q.replace(/'/g,"\\'"))}', '${hEsc(i.a.replace(/'/g,"\\'"))}')" style="padding:10px; border-bottom:1px solid #eee; ${usedSet.has(i.q)?'opacity:0.3;':'cursor:pointer;'}"><strong>${hEsc(i.a)}</strong><br><small style="color:#666;">${hEsc(i.q)}</small></div>`).join('');
+        if(s) { list = list.filter(i => i.q.includes(s) || i.a.includes(s)); } 
+        else { list = shuffleArray([...list]).slice(0, 50); }
+        area.innerHTML = list.map(i => `<div class="quiz-item" onclick="applyQuiz('${hEsc(i.q.replace(/'/g,"\\'"))}', '${hEsc(i.a.replace(/'/g,"\\'"))}')" style="${usedSet.has(i.q)?'opacity:0.3;':'cursor:pointer;'}"><strong>${hEsc(i.a)}</strong><br><small style="color:#666;">${hEsc(i.q)}</small></div>`).join('');
         area.scrollTop = 0;
     }
-    function applyQuiz(q, a) { clearInterval(timer); currentQuiz = { q, a }; revealed = []; usedSet.add(q); db.ref('usedSet').set([...usedSet]); history.push({q, a}); document.getElementById('admin-q-full').innerText = q; document.getElementById('admin-a-full').innerText = a; db.ref().update({ status: "waiting", winner: "", correctList: null, wrongList: null, boardAnswers: null, typing: null, finalReveal: false, isGameSet: false }); if(subWindow) subWindow.resetForNext(); sync(true); renderList(); }
+
+    // 履歴描画
+    function renderHistory() {
+        const area = document.getElementById('history-list-area');
+        area.innerHTML = history.map((item, idx) => `
+            <div class="history-item" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="flex:1;">
+                    <strong style="color:var(--primary);">${hEsc(item.a)}</strong><br>
+                    <small style="color:#888;">${hEsc(item.q)}</small>
+                </div>
+                <button onclick="deleteHistoryItem(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:1rem;">🗑️</button>
+            </div>
+        `).join('');
+    }
+
+    // 個別履歴削除
+    function deleteHistoryItem(idx) {
+        if(confirm("この履歴を削除しますか？")) {
+            const newHistory = [...history];
+            newHistory.splice(idx, 1);
+            db.ref('history').set(newHistory);
+        }
+    }
+
+    // 全履歴削除
+    function clearHistory() {
+        if(confirm("全ての出題履歴を消去しますか？")) {
+            db.ref('history').set([]);
+        }
+    }
+
+    function applyQuiz(q, a) { 
+        clearInterval(timer); currentQuiz = { q, a }; revealed = []; 
+        usedSet.add(q); db.ref('usedSet').set([...usedSet]); 
+        
+        // 履歴追加
+        const newHistory = [...history, {q, a}];
+        db.ref('history').set(newHistory);
+
+        document.getElementById('admin-q-full').innerText = q; 
+        document.getElementById('admin-a-full').innerText = a; 
+        db.ref().update({ status: "waiting", winner: "", correctList: null, wrongList: null, boardAnswers: null, typing: null, finalReveal: false, isGameSet: false }); 
+        if(subWindow) subWindow.resetForNext(); 
+        sync(true); renderList(); 
+    }
+
     function startQuiz() { db.ref('status').set('active'); const speed = parseInt(document.getElementById('readSpeed').value); clearInterval(timer); timer = setInterval(() => { if(revealed.length < currentQuiz.q.length) { let n = 0; while(revealed.includes(n)) n++; revealed.push(n); sync(); } else clearInterval(timer); }, speed); }
     function sync(forceHideSub = false) { const h = Array.from(currentQuiz.q).map((c, i) => revealed.includes(i) ? `<span>${hEsc(c)}</span>` : `<span class="hidden">${hEsc(c)}</span>`).join(''); document.getElementById('display').innerHTML = h; if(subWindow && !forceHideSub) subWindow.document.getElementById('text').innerHTML = h; }
     
     function openType(t) {
         db.ref('status').set('active');
-        const m = { 
-            kanji:/[\u4E00-\u9FFF]/, hira:/[\u3040-\u309F]/, kana:/[\u30A0-\u30FF]/, num:/[0-9０-９]/, alp:/[a-zA-Zａ-ｚＡ-Ｚ]/, 
-            sym:/[！・？、。：；／＿－＝＋＊＆％＄＃＠！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～「」『』【】（）ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ★☆]/ 
-        };
+        const m = { kanji:/[\u4E00-\u9FFF]/, hira:/[\u3040-\u309F]/, kana:/[\u30A0-\u30FF]/, num:/[0-9０-９]/, alp:/[a-zA-Zａ-ｚＡ-Ｚ]/, sym:/[！・？、。：；／＿－＝＋＊＆％＄＃＠！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～「」『』【】（）ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ★☆]/ };
         let count = 0; Array.from(currentQuiz.q).forEach((c, i) => { if (m[t] && m[t].test(c) && !revealed.includes(i)) { revealed.push(i); count++; } });
         if (count > 0) requestSound('type'); sync();
     }
@@ -550,7 +342,7 @@ function removePlayer(n) {
 
     function resumeQuiz() { db.ref('status').set('active'); if(revealed.length < currentQuiz.q.length) startQuiz(); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
-    function resetAll() { if (confirm("完全リセット？")) { history = []; usedSet.clear(); db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [] }); renderList(); } }
+    function resetAll() { if (confirm("完全リセット？")) { db.ref('history').set([]); usedSet.clear(); db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [], history: [] }); renderList(); } }
 
     function lockName() { const n = document.getElementById('p-name').value.trim(); if(!n) return alert("名前！"); isPlayerLocked = true; document.getElementById('p-name').disabled = true; document.getElementById('p-lock-btn').style.display = 'none'; document.getElementById('locked-name-display').style.display = 'block'; document.getElementById('current-player-name').innerText = n; }
     function initPlayer() { 
@@ -602,7 +394,7 @@ function removePlayer(n) {
                 window.reveal = (a,q) => { document.getElementById('ans').innerText=a; document.getElementById('ans').style.display='block'; document.getElementById('text').innerHTML=q; };
                 window.toggleRank = (v) => { document.getElementById('rank-side').style.opacity = v ? '1' : '0'; };
                 window.updateRank = (list) => { document.getElementById('rank-list').innerHTML = list.map(([n,v]) => '<div style="display:flex;justify-content:space-between;font-size:1.6rem;padding:8px 0;border-bottom:1px solid #333;"><span>'+n+'</span><span>'+v+'pt</span></div>').join(''); };
-                window.showResult = (list, hist) => { document.getElementById('result-overlay').style.display='flex'; document.getElementById('res-list').innerHTML = list.map(([n,v],i) => '<div style="font-size:2rem;margin:10px;padding:15px;background:rgba(255,255,255,0.1);border-radius:10px;border-left:10px solid '+(i===0?'#f1c40f':(i===1?'#bdc3c7':'#cd7f32'))+'">'+(i+1)+'位 '+n+': '+v+'pt</div>').join(''); document.getElementById('hist-inner').innerHTML = hist.map(item => '<div style="margin-bottom:15px;border-bottom:1px solid #444;font-size:0.9rem;">'+item.q+'<br><b style="color:#f1c40f;font-size:1.2rem;">正解: '+item.a+'</b></div>').join(''); };
+                window.showResult = (list, hist) => { document.getElementById('result-overlay').style.display='flex'; document.getElementById('res-list').innerHTML = list.map(([n,v],i) => '<div style="font-size:2rem;margin:10px;padding:15px;background:rgba(255,255,255,0.1);border-radius:10px;border-left:10px solid '+(i===0?'#f1c40f':(i===1?'#bdc3c7':'#cd7f32'))+'">'+(i+1)+'位 '+n+': '+v+'pt</div>').join(''); document.getElementById('hist-inner').innerHTML = (hist || []).map(item => '<div style="margin-bottom:15px;border-bottom:1px solid #444;font-size:0.9rem;">'+item.q+'<br><b style="color:#f1c40f;font-size:1.2rem;">正解: '+item.a+'</b></div>').join(''); };
                 window.hideResult = () => { document.getElementById('result-overlay').style.display='none'; };
                 window.syncBoard = (d) => {
                     const area = document.getElementById('board-area');
@@ -623,16 +415,3 @@ function removePlayer(n) {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
