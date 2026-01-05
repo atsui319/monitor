@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Specialized Edition</title>
+    <title>QuizConsole Pro - Board Toggle Edition</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -26,11 +26,9 @@
         #remote-button:disabled { background: #1f2937; color: #6b7280; border-color: #333; }
         .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; }
         input, select { background: #0d1117; color: #e5e7eb; border: 1px solid #333; padding: 5px; }
-        
-        /* ボード回答リストの個別スタイル */
         .board-ans-item { background: #1f2937; color: #e5e7eb; border-left: 5px solid #555; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
         .board-ans-item .controls { display: flex; gap: 5px; }
-        .btn-open { background: #4b5563 !important; }
+        .btn-open { min-width: 40px; }
         .btn-ok { background: #166534 !important; }
         .btn-ng { background: #7f1d1d !important; }
     </style>
@@ -201,10 +199,13 @@
                 bArea.style.display = 'block';
                 document.getElementById('board-list-inner').innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => {
                     const sn = safeName(n);
+                    const isOpened = d.revealedBoards?.[sn];
                     return `<div class="board-ans-item" style="border-left:5px solid ${d.correctList?.[sn]?'green':(d.wrongList?.[sn]?'red':'#555')}">
                         <span>${hEsc(n)}: ${hEsc(ans)}</span>
                         <div class="controls">
-                            <button class="btn-open" onclick="openIndividualBoard('${sn}')">👁</button>
+                            <button class="btn-open" onclick="toggleIndividualBoard('${sn}')" style="background:${isOpened ? 'var(--primary)' : '#4b5563'} !important">
+                                ${isOpened ? '🔓' : '👁'}
+                            </button>
                             <button class="btn-ok" onclick="judge(true, '${n}')">〇</button>
                             <button class="btn-ng" onclick="judge(false, '${n}')">×</button>
                         </div>
@@ -224,12 +225,8 @@
     function removePlayer(n) {
         if(confirm(`${n} を削除（キック）しますか？`)) {
             const sn = safeName(n);
-            db.ref('scores/' + sn).remove();
-            db.ref('waits/' + sn).remove();
-            db.ref('boardAnswers/' + sn).remove();
-            db.ref('typing/' + sn).remove();
-            db.ref('correctList/' + sn).remove();
-            db.ref('wrongList/' + sn).remove();
+            db.ref('scores/' + sn).remove(); db.ref('waits/' + sn).remove(); db.ref('boardAnswers/' + sn).remove();
+            db.ref('typing/' + sn).remove(); db.ref('correctList/' + sn).remove(); db.ref('wrongList/' + sn).remove();
             db.ref('revealedBoards/' + sn).remove();
         }
     }
@@ -303,7 +300,7 @@
         });
     }
 
-    function openIndividualBoard(sn) { requestSound('type'); db.ref('revealedBoards/' + sn).set(true); }
+    function toggleIndividualBoard(sn) { db.ref('revealedBoards/' + sn).transaction(c => c ? null : true); }
     function revealBoardAll() { requestSound('type'); db.ref('boardRevealAll').set(true); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
     function resumeQuiz() { db.ref('status').set('active'); if(revealed.length < currentQuiz.q.length) startQuiz(); }
@@ -366,7 +363,7 @@
                     const area = document.getElementById('board-area');
                     const players = Array.from(new Set([...Object.keys(d.boardAnswers || {}), ...Object.keys(d.typing || {})]));
                     area.innerHTML = players.map(n => {
-                        const sn = n.replace(/[.#$/[\\]]/g, "_");
+                        const sn = n.replace(/[.#$/[\\\]]/g, "_");
                         const ans = d.boardAnswers?.[sn]; 
                         const isTyping = d.typing?.[sn];
                         const isCorrect = d.correctList?.[sn];
