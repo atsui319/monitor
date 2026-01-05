@@ -2,20 +2,20 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Ultimate Integrated</title>
+    <title>QuizConsole Pro - Perfect Integrated</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        :root { --bg: #0f1115; --primary: #4aa3ff; --danger: #ff5c5c; --success: #2ecc71; --dark: #000; --test: #8e7dff; }
+        :root { --bg: #0f1115; --primary: #3498db; --danger: #e74c3c; --success: #2ecc71; --dark: #000; --test: #8e7dff; }
         body { font-family: sans-serif; background: var(--bg); color: #e5e7eb; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
         .page-section { display: none; height: 100%; width: 100%; }
         #role-ui { display: block; text-align: center; padding-top: 100px; }
         button { cursor: pointer; border-radius: 8px; border: 1px solid #333; background: #1f2937; color: #e5e7eb; transition: 0.2s; padding: 5px 10px; }
         button:hover { background: #2b3548; }
 
-        /* --- 統合クイズ表示エリア (Viewer) --- */
+        /* --- 統合Viewer (視聴画面) --- */
         .integrated-viewer { background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; border-bottom: 2px solid #2a2f3a; }
-        .q-text-giant { font-size: 2.2rem; font-weight: bold; text-align: center; color: #fff; min-height: 2.5em; line-height: 1.4; }
+        .q-text-giant { font-size: 2.2rem; font-weight: bold; text-align: center; color: #fff; min-height: 2.5em; line-height: 1.4; width: 90%; }
         .q-text-giant span.hidden { visibility: hidden; border-bottom: 2px solid #333; margin: 0 2px; min-width: 0.8em; display: inline-block; }
         .ans-giant { display: none; font-size: 2.8rem; color: #f1c40f; border: 6px solid #f1c40f; padding: 10px 20px; border-radius: 15px; margin-top: 15px; font-weight: bold; }
         .board-area-integrated { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; width: 100%; }
@@ -23,20 +23,19 @@
         .p-board-box.correct { border-color: var(--success); background: #062010; }
         .p-board-box.wrong { border-color: var(--danger); background: #2a0a0a; }
 
-        /* --- 管理者UI --- */
+        /* --- 管理者 --- */
         .admin-flex { display: flex; gap: 10px; height: 100vh; padding: 10px; box-sizing: border-box; }
         .main-panel { flex: 1; overflow-y: auto; background: #161a22; border-radius: 12px; padding: 15px; border: 1px solid #2a2f3a; }
         .sidebar { width: 350px; display: flex; flex-direction: column; gap: 10px; }
         .sidebar-section { background: #111827; padding: 10px; border-radius: 10px; flex: 1; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #2a2f3a; }
         #full-mgr-list, #quiz-list-area { flex: 1; overflow-y: auto; background: #0d1117; padding: 5px; border-radius: 5px; }
 
-        /* --- 回答者UI --- */
+        /* --- 回答者 --- */
         #player-ui { display: none; flex-direction: column; height: 100vh; }
         #p-controls { background: #111827; padding: 15px; text-align: center; }
         #remote-button { width: 120px; height: 120px; border-radius: 50%; font-size: 1.5rem; font-weight: bold; border: 6px solid #333; }
         #remote-button:not(:disabled) { background: #7f1d1d; color: white; border-color: #ff5c5c; }
         #player-gameover { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:9999; }
-        
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     </style>
 </head>
@@ -63,9 +62,9 @@
                 <button onclick="resetAll()" style="background:var(--danger); border:none;">🚮 全消去</button>
             </div>
             
-            <div class="integrated-viewer" style="padding:10px; min-height:150px; margin-bottom:10px; border-radius:10px;">
-                <div id="adm-text" class="q-text-giant" style="font-size:1.5rem;"></div>
-                <div id="adm-ans" class="ans-giant" style="font-size:1.8rem; margin-top:5px;"></div>
+            <div class="integrated-viewer" style="padding:10px; min-height:120px; margin-bottom:10px; border-radius:10px;">
+                <div id="adm-text" class="q-text-giant" style="font-size:1.4rem; min-height:2em;"></div>
+                <div id="adm-ans" class="ans-giant" style="font-size:1.6rem; margin-top:5px;"></div>
             </div>
 
             <div id="activePlayer" style="font-size:1.8rem; color:var(--danger); text-align:center; font-weight:bold; min-height:1.2em;">待機中</div>
@@ -77,9 +76,9 @@
                 <button onclick="openAll()" style="background:#444; margin-left:auto;">全表示</button>
             </div>
 
-            <div style="background:#000; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #333;">
-                <span id="admin-a-full" style="color:var(--danger); font-weight:bold; font-size:1.1rem;">-</span><br>
-                <span id="admin-q-full" style="font-size:0.9rem; color:#aaa;">-</span>
+            <div style="background:#000; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid #333;">
+                <span id="admin-a-full" style="color:var(--danger); font-weight:bold;">-</span><br>
+                <span id="admin-q-full" style="font-size:0.85rem; color:#888;">-</span>
             </div>
             
             <div style="display:flex; gap:10px;">
@@ -141,7 +140,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 音声ファイルの定義
     const sounds = { push: new Audio('sounds/push.mp3'), correct: new Audio('sounds/correct.mp3'), wrong: new Audio('sounds/wrong.mp3'), type: new Audio('sounds/type.mp3') };
 
     let masterData = { all: [] }, activeGenre = 'all', usedSet = new Set(), currentQuiz = { q: "", a: "" }, revealed = [], isPlayerLocked = false, timer = null;
@@ -156,15 +154,10 @@
         humanities: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTTUKra8YsSzkZHvm7QRzKeUT6KBi90JHU99B8AK2YiFd2hpxPfKQNCcrUiBVn6BTyPUWqNwJEUVsgD/pub?output=csv"
     };
 
-    const hEsc = (s) => { const e = document.createElement('div'); e.textContent = s; return e.innerHTML; };
-    const safeName = (n) => n.replace(/[.#$/[\]]/g, "_");
+    const hEsc = (s) => { if(!s) return ""; const e = document.createElement('div'); e.textContent = s; return e.innerHTML; };
+    const safeName = (n) => n ? n.replace(/[.#$/[\]]/g, "_") : "unnamed";
 
-    function playSE(key) {
-        if(sounds[key]) {
-            sounds[key].currentTime = 0;
-            sounds[key].play().catch(() => {});
-        }
-    }
+    function playSE(key) { if(sounds[key]) { sounds[key].currentTime = 0; sounds[key].play().catch(() => {}); } }
 
     function switchPage(role) { 
         document.querySelectorAll('.page-section').forEach(el => el.style.display = 'none'); 
@@ -173,7 +166,45 @@
         role === 'admin' ? initAdmin() : initPlayer(); 
     }
 
-    // --- 管理者ロジック ---
+    // --- Viewer更新ロジック (ここが undefined の原因箇所) ---
+    function updateIntegratedViewer(d, textId, ansId, boardId) {
+        if(!d) return;
+        const qText = d.q_text || ""; 
+        const revIdx = d.revealed_indices || [];
+        const container = document.getElementById(textId);
+        
+        // 文字列として構築
+        if(container) {
+            container.innerHTML = Array.from(qText).map((c, i) => 
+                (revIdx.includes(i) || d.finalReveal) ? `<span>${hEsc(c)}</span>` : `<span class="hidden">${hEsc(c)}</span>`
+            ).join('');
+        }
+        
+        const ansContainer = document.getElementById(ansId);
+        if(ansContainer) {
+            if(d.finalReveal) { ansContainer.innerText = d.a_text || ""; ansContainer.style.display = 'block'; }
+            else { ansContainer.style.display = 'none'; }
+        }
+
+        if(boardId) {
+            const bArea = document.getElementById(boardId);
+            if(!bArea) return;
+            const players = Array.from(new Set([...Object.keys(d.boardAnswers || {}), ...Object.keys(d.typing || {})]));
+            bArea.innerHTML = players.map(n => {
+                const ans = (d.boardAnswers || {})[n];
+                const isTyping = (d.typing || {})[n];
+                const isWrong = (d.wrongList || {})[n];
+                // ボードの「？？？」表示ロジック
+                const content = (d.finalReveal || isWrong) ? (ans || "") : (ans ? "？？？" : (isTyping ? "<span style='color:#3498db;animation:blink 1s infinite'>🖊 入力中</span>" : ""));
+                if(!content && !isTyping) return "";
+                return `<div class="p-board-box ${(d.correctList||{})[n]?'correct':''}${isWrong?'wrong':''}">
+                    <small style="font-size:0.7rem; color:#aaa;">${hEsc(n)}</small><br><strong>${hEsc(content)}</strong>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    // --- 管理者 ---
     async function initAdmin() {
         db.ref('usedSet').on('value', s => { usedSet = new Set(s.val() || []); renderList(); });
         const tabs = document.getElementById('genre-tabs');
@@ -195,7 +226,6 @@
 
         db.ref().on('value', snap => {
             const d = snap.val() || {};
-            // スコア管理リスト
             const scoreEntries = Object.entries(d.scores || {}).sort((a,b)=>b[1]-a[1]);
             document.getElementById('full-mgr-list').innerHTML = scoreEntries.map(([n,v]) => {
                 const w = d.waits?.[n] || 0;
@@ -208,7 +238,6 @@
 
             document.getElementById('activePlayer').innerText = d.winner ? "🎤 " + d.winner : (d.mode === 'all_board' && d.status !== 'waiting' ? "🖊 全員解答中" : "待機中");
             
-            // SE再生同期
             if(d.lastEvent === 'pushed') playSE('push');
             if(d.lastEvent === 'correct') playSE('correct');
             if(d.lastEvent === 'wrong') playSE('wrong');
@@ -279,7 +308,7 @@
     function revealAnswer() { db.ref('finalReveal').set(true); }
     function resetAll() { if(confirm("完全リセット？")) db.ref().set({ status: "idle", mode: "push", scores: {}, usedSet: [] }); }
 
-    // --- 回答者ロジック ---
+    // --- 回答者 ---
     function lockName() {
         const n = document.getElementById('p-name').value.trim();
         if(!n) return alert("名前！");
@@ -293,48 +322,19 @@
             if(!isPlayerLocked) return;
             const d = snap.val() || {}, name = document.getElementById('p-name').value.trim(), sn = safeName(name);
             document.getElementById('p-score').innerText = d.scores?.[sn] || 0;
-            
-            // ゲームセット処理
             if(d.isGameSet) {
                 document.getElementById('player-gameover').style.display = 'flex';
                 const entries = Object.entries(d.scores || {}).sort((a,b)=>b[1]-a[1]);
                 document.getElementById('final-rank-text').innerText = `${entries.length}人中 ${entries.findIndex(e=>e[0]===sn)+1}位`;
             }
-            
             const isWinner = (d.winner === name);
             const isCorrected = d.correctList?.[sn], isWronged = d.wrongList?.[sn];
             document.getElementById('player-status-area').innerText = isCorrected ? "✅ 正解！" : (isWinner ? "🎤 解答権！" : (isWronged ? "❌ 不正解" : (d.status === 'active' ? "受付中" : "待機中")));
-            
             document.getElementById('remote-button').disabled = !(d.status === 'active' && !d.winner && !isCorrected && d.mode !== 'all_board');
             document.getElementById('board-input-ui').style.display = (isWinner || (d.mode === 'all_board' && d.status !== 'waiting')) ? 'block' : 'none';
 
-            // 統合視聴画面の更新
             updateIntegratedViewer(d, 'p-text', 'p-ans', 'p-board-area');
         });
-    }
-
-    function updateIntegratedViewer(d, textId, ansId, boardId) {
-        const qText = d.q_text || "", revIdx = d.revealed_indices || [];
-        const container = document.getElementById(textId);
-        container.innerHTML = Array.from(qText).map((c, i) => (revIdx.includes(i) || d.finalReveal) ? `<span>${hEsc(c)}</span>` : `<span class="hidden">${hEsc(c)}</span>`).join('');
-        
-        const ansContainer = document.getElementById(ansId);
-        if(d.finalReveal) { ansContainer.innerText = d.a_text; ansContainer.style.display = 'block'; }
-        else { ansContainer.style.display = 'none'; }
-
-        if(boardId) {
-            const bArea = document.getElementById(boardId);
-            const players = Array.from(new Set([...Object.keys(d.boardAnswers || {}), ...Object.keys(d.typing || {})]));
-            bArea.innerHTML = players.map(n => {
-                const ans = (d.boardAnswers || {})[n], isTyping = (d.typing || {})[n];
-                // ボードの「？？？」表示ロジック
-                const content = (d.finalReveal || (d.wrongList || {})[n]) ? (ans || "") : (ans ? "？？？" : (isTyping ? "<span style='color:#3498db;animation:blink 1s infinite'>🖊 入力中</span>" : ""));
-                if(!content && !isTyping) return "";
-                return `<div class="p-board-box ${(d.correctList||{})[n]?'correct':''}${(d.wrongList||{})[n]?'wrong':''}">
-                    <small style="font-size:0.7rem; color:#aaa;">${hEsc(n)}</small><br><strong>${hEsc(content)}</strong>
-                </div>`;
-            }).join('');
-        }
     }
 
     function reportTyping(val) { const n = safeName(document.getElementById('p-name').value.trim()); if(isPlayerLocked) db.ref('typing/'+n).set(val.length > 0); }
@@ -347,7 +347,6 @@
         db.ref('winner').transaction(c => c ? undefined : n, (err, ok) => { if(ok) db.ref().update({ status: 'pushed', lastEvent: 'pushed' }); });
     }
 
-    // 初回クリックでオーディオを有効化
     document.body.addEventListener('click', () => { Object.values(sounds).forEach(s => { s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(() => {}); }); }, { once: true });
 </script>
 </body>
