@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Fixed Edition</title>
+    <title>QuizConsole Pro - Final Fix</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -249,10 +249,12 @@
         usedSet.add(q); db.ref('usedSet').set([...usedSet]); history.push({q, a}); 
         document.getElementById('admin-q-full').innerText = q; document.getElementById('admin-a-full').innerText = a; 
         
-        // 次の問題へ行くときにボード回答、判定リスト、個別公開フラグをすべてクリア
+        // 問題移行時にデータベースを初期化
         db.ref().update({ 
-            status: "waiting", winner: "", correctList: null, wrongList: null, 
-            boardAnswers: null, typing: null, finalReveal: false, boardRevealAll: false, 
+            status: "waiting", winner: "", 
+            correctList: null, wrongList: null, 
+            boardAnswers: null, typing: null, 
+            finalReveal: false, boardRevealAll: false, 
             revealedBoards: null, isGameSet: false 
         }); 
         
@@ -303,11 +305,28 @@
         });
     }
 
-    function toggleIndividualBoard(sn) { db.ref('revealedBoards/' + sn).transaction(c => c ? null : true); }
+    function toggleIndividualBoard(sn) { 
+        db.ref('revealedBoards/' + sn).once('value', snap => {
+            db.ref('revealedBoards/' + sn).set(snap.val() ? null : true);
+        });
+    }
     function revealBoardAll() { requestSound('type'); db.ref('boardRevealAll').set(true); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
     function resumeQuiz() { db.ref('status').set('active'); if(revealed.length < currentQuiz.q.length) startQuiz(); }
-    function resetAll() { if (confirm("完全リセット？")) { history = []; usedSet.clear(); db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [] }); renderList(); } }
+
+    function resetAll() { 
+        if (confirm("全ての履歴、得点、参加者、回答を完全に消去しますか？")) { 
+            history = []; usedSet.clear(); 
+            db.ref().set({ 
+                status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [], 
+                scores: null, waits: null, boardAnswers: null, typing: null, 
+                correctList: null, wrongList: null, revealedBoards: null, 
+                finalReveal: false, boardRevealAll: false, winner: "" 
+            }).then(() => {
+                location.reload(); // 内部変数をクリアするためリロード
+            });
+        } 
+    }
 
     function lockName() { const n = document.getElementById('p-name').value.trim(); if(!n) return alert("名前！"); isPlayerLocked = true; document.getElementById('p-name').disabled = true; document.getElementById('p-lock-btn').style.display = 'none'; document.getElementById('locked-name-display').style.display = 'block'; document.getElementById('current-player-name').innerText = n; }
     
@@ -367,17 +386,26 @@
                 
                 window.syncBoard = (d) => {
                     const area = document.getElementById('board-area');
-                    const players = Array.from(new Set([...Object.keys(d.boardAnswers || {}), ...Object.keys(d.typing || {})]));
-                    area.innerHTML = players.map(n => {
+                    const allPlayers = Array.from(new Set([...Object.keys(d.scores || {}), ...Object.keys(d.boardAnswers || {}), ...Object.keys(d.typing || {})]));
+                    area.innerHTML = allPlayers.map(n => {
                         const sn = n.replace(/[.#$/[\\\]]/g, \"_\");
                         const ans = d.boardAnswers?.[sn]; 
                         const isTyping = d.typing?.[sn];
                         const isCorrect = d.correctList?.[sn];
                         const isWrong = d.wrongList?.[sn];
+                        // 公開条件: 個別公開フラグ or 全体公開フラグ or 正解公開時 or 誤答した時
                         const isOpened = !!(d.revealedBoards?.[sn] || d.boardRevealAll || d.finalReveal || isWrong);
                         
-                        let content = isOpened ? (ans || \"\") : (ans ? \"？？？\" : (isTyping ? \"<span style='color:#3498db;animation:blink 1s infinite'>🖊 入力中...</span>\" : \"\"));
-                        if(!content && !isTyping) return \"\";
+                        let content = \"\";
+                        if (isOpened) {
+                            content = ans || \"(未回答)\";
+                        } else if (ans) {
+                            content = \"？？？\";
+                        } else if (isTyping) {
+                            content = \"<span style='color:#3498db;animation:blink 1s infinite'>🖊 入力中...</span>\";
+                        }
+
+                        if(!content) return \"\";
                         return '<div class=\"board-box '+(isCorrect?'correct':(isWrong?'wrong':''))+'\"><small>'+n+'</small><div style=\"font-size:2.2rem;font-weight:bold;color:#f1c40f;min-height:1.2em;\">'+content+'</div></div>';
                     }).join('');
                 };
