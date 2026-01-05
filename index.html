@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - The Perfect Version 1.4</title>
+    <title>QuizConsole Pro - The Perfect Version 1.5</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -25,8 +25,14 @@
         #remote-button { width: 180px; height: 180px; border-radius: 50%; font-size: 2rem; font-weight: bold; cursor: pointer; border: 8px solid #333; }
         #remote-button:not(:disabled) { background: #7f1d1d; color: white; border-color: #991b1b; }
         .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; }
-        #admin-q-full { display: block; margin-top: 4px; padding: 8px 10px; background: #000 !important; color: #ffffff !important; border-radius: 6px; font-weight: bold; line-height: 1.4; border: 1px solid #333; }
-        #admin-a-full { color: #ff4d4d !important; font-weight: bold; font-size: 1.2rem; }
+        
+        /* 視認性修正部分 */
+        #admin-info-box { background:#111; padding:15px; border-radius:8px; border:1px solid #333; color: #fff; }
+        #admin-q-full { display: block; margin-top: 5px; padding: 10px; background: #000; color: #fff; border-radius: 6px; border: 1px solid #444; font-weight: bold; line-height: 1.4; }
+        #admin-a-full { color: #ff5c5c; font-weight: bold; font-size: 1.3rem; }
+        .label-text { color: #aaa; font-weight: bold; margin-right: 5px; }
+        .speed-control { display:flex; align-items:center; gap:10px; margin-top:10px; background:#1f2937; padding:12px; border-radius:8px; color: #fff; }
+
         .history-item { padding: 8px; border-bottom: 1px solid #222; font-size: 0.85rem; }
         #player-gameover { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); color: white; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
     </style>
@@ -51,7 +57,7 @@
                     <button onclick="resetAll()" style="background:var(--danger); color:white; padding:10px; border-radius:8px; border:none; cursor:pointer;">🚮 全消去＆履歴クリア</button>
                 </div>
                 <div style="background:#1e293b; padding:15px; border-radius:10px; text-align:center; border:2px solid #334155; margin-bottom:15px;">
-                    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:10px; color:#fff;">
                         <span id="status-label" class="status-badge" style="background:#777;">待機中</span>
                         <select id="gameMode" onchange="db.ref('mode').set(this.value)">
                             <option value="push">⚡ 早押し</option>
@@ -82,11 +88,11 @@
                     <button onclick="openAll()" style="background:#555; color:white; border:none; margin-left:auto;">全表示</button>
                 </div>
                 <div id="display"></div>
-                <div style="background:#0d1117; padding:10px; border-radius:8px; border:1px solid #333;">
-                    <strong style="color:#aaa;">正解：</strong> <span id="admin-a-full">-</span><br>
-                    <strong style="color:#aaa;">全文：</strong> <span id="admin-q-full">-</span>
+                <div id="admin-info-box">
+                    <span class="label-text">正解：</span> <span id="admin-a-full">-</span><br>
+                    <span class="label-text">全文：</span> <span id="admin-q-full">-</span>
                 </div>
-                <div style="display:flex; align-items:center; gap:10px; margin-top:10px; background:#1f2937; padding:10px; border-radius:8px;">
+                <div class="speed-control">
                     <span>速度:</span> <input type="range" id="readSpeed" min="50" max="1000" value="150" step="10">
                     <button onclick="startQuiz()" style="flex:1; padding:12px; background:#2563eb; color:white; border:none; border-radius:5px; font-weight:bold;">自動読上開始</button>
                 </div>
@@ -113,7 +119,7 @@
 
 <div id="player-ui" class="page-section">
     <div class="container" style="max-width: 500px; margin: 20px auto; text-align: center;">
-        <div style="font-size:2.5rem; font-weight:bold;">Score: <span id="p-score">0</span></div>
+        <div style="font-size:2.5rem; font-weight:bold; color:#fff;">Score: <span id="p-score">0</span></div>
         <div id="player-status-area" style="margin:15px; min-height:40px; font-weight:bold; color:var(--danger);"></div>
         <div id="name-input-area">
             <input type="text" id="p-name" placeholder="名前を入力" style="width:85%; padding:15px; font-size:1.3rem; border-radius:10px; border:3px solid #333; margin-bottom:10px; text-align:center; background:#0d1117; color:#fff;">
@@ -145,7 +151,7 @@
         anime: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTBRf9k4zS7Ht5s7GKejqT2d-cyWbDHd19DwTPmAzoHe40d9nV1cVu-RH565sIq9GbYmEKkzhpBytp/pub?output=csv",
         social: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTXVYOqHu_0VRIkiVK0RQO-ZWPZ6pHGqIw5VxBWdOlg3-HbP3q26gM0fVxTndREhjqbaxFzcjeuoMcE/pub?output=csv",
         life: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSTr7JL0lBCMLRBFi-CraPlJxzp4xrGD8RSnc8MSuoV3ORISo0iCFWMmI_FCtDlgkxwPqmv_TwAvufn/pub?output=csv",
-        sport: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSJYls3O8_98SKNWqx34c0V5HLIaXdxxA8v4E3c1iwrTFZBL1TSxzeem9AbKZKYfMkQEcu7bECcsgVo/pub?output=csv",
+        sport: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSJYls3O8_98SKNWqx34c0V5HLIaXdxxA8+8E3c1iwrTFZBL1TSxzeem9AbKZKYfMkQEcu7bECcsgVo/pub?output=csv",
         humanities: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTTUKra8YsSzkZHvm7QRzKeUT6KBi90JHU99B8AK2YiFd2hpxPfKQNCcrUiBVn6BTyPUWqNwJEUVsgD/pub?output=csv"
     };
 
@@ -232,11 +238,8 @@
         revealed = []; 
         usedSet.add(q); 
         db.ref('usedSet').set([...usedSet]);
-        
-        // 履歴をFirebaseに追加
         const newHistory = [...quizHistory, {q, a}];
         db.ref('quizHistory').set(newHistory);
-
         document.getElementById('admin-q-full').innerText = q; 
         document.getElementById('admin-a-full').innerText = a; 
         db.ref().update({ status: "waiting", winner: "", correctList: null, wrongList: null, boardAnswers: null, typing: null, finalReveal: false, isGameSet: false }); 
@@ -277,20 +280,7 @@
 
     function resumeQuiz() { db.ref('status').set('active'); if(revealed.length < currentQuiz.q.length) startQuiz(); }
     function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
-    
-    // 全リセット時に履歴(quizHistory)もリセットするように修正
-    function resetAll() { 
-        if (confirm("スコア・出題済み・履歴をすべて消去しますか？")) {
-            db.ref().set({ 
-                status: "idle", 
-                mode: "push", 
-                rankVisible: true, 
-                isGameSet: false, 
-                usedSet: [], 
-                quizHistory: [] 
-            }); 
-        }
-    }
+    function resetAll() { if (confirm("すべて消去しますか？")) db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [], quizHistory: [] }); }
 
     function lockName() { const n = document.getElementById('p-name').value.trim(); if(!n) return alert("名前を入力してください"); isPlayerLocked = true; document.getElementById('p-name').disabled = true; document.getElementById('p-lock-btn').style.display = 'none'; document.getElementById('locked-name-display').style.display = 'block'; document.getElementById('current-player-name').innerText = n; }
     function initPlayer() { 
