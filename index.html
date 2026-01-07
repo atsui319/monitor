@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>QuizConsole Pro - Manual Edition V3.2</title>
+    <title>QuizConsole Pro - Streamlined</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -10,28 +10,32 @@
         body { font-family: sans-serif; background: var(--bg); color: #e5e7eb; margin: 0; padding: 10px; height: 100vh; overflow: hidden; box-sizing: border-box; }
         .page-section { display: none; height: 100%; } 
         #role-ui { display: block; }
-        .container { background: #161a22; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); border: 1px solid #2a2f3a; margin-bottom: 15px; }
-        .admin-flex { display: flex; gap: 15px; height: calc(100vh - 40px); max-width: 1600px; margin: 0 auto; }
-        .main-panel { flex: 1; overflow-y: auto; padding-right: 5px; }
-        .sidebar { width: 380px; display: flex; flex-direction: column; gap: 15px; height: 100%; }
-        .sidebar-section { background: #161a22; padding: 12px; border-radius: 12px; display: flex; flex-direction: column; min-height: 0; border: 1px solid #2a2f3a; }
-        #full-mgr-list, #quiz-list-area, #history-list { background: #0d1117; border: 1px solid #222; border-radius: 8px; overflow-y: auto; }
-        #display { font-size: 1.8rem; background: #000; color: white; padding: 20px; border-radius: 8px; min-height: 4em; display: flex; flex-wrap: wrap; margin-bottom: 15px; border: 4px solid #222; }
-        #display span { border-bottom: 2px solid #333; margin-right: 2px; min-width: 0.8em; text-align: center; white-space: pre; }
-        #display span.hidden { visibility: hidden; }
-        .mgr-item { display: flex; flex-direction: column; padding: 8px; border-bottom: 1px solid #222; font-size: 0.85rem; gap: 5px; }
-        .btn-ok { background: #16a34a !important; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; }
-        /* 誤答ボタンを公開ボタン風の見た目に変更 */
+        .container { background: #161a22; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); border: 1px solid #2a2f3a; }
+        .admin-flex { display: flex; gap: 15px; height: calc(100vh - 20px); max-width: 1600px; margin: 0 auto; }
+        
+        /* メインパネル */
+        .main-panel { flex: 1.2; display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
+        .control-panel { background: #1e293b; padding: 20px; border-radius: 12px; border: 2px solid #334155; }
+        
+        /* サイドパネル */
+        .sidebar { flex: 0.8; display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
+        .sidebar-section { background: #161a22; padding: 15px; border-radius: 12px; border: 1px solid #2a2f3a; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* 問題表示エリア */
+        #display { font-size: 2.2rem; background: #000; color: white; padding: 25px; border-radius: 8px; min-height: 120px; border: 4px solid #333; margin: 15px 0; line-height: 1.4; }
+        
+        /* 下部の大きなストックエリア */
+        .stock-area { flex: 1; display: flex; flex-direction: column; background: #161a22; border-radius: 12px; border: 1px solid #2a2f3a; padding: 15px; overflow: hidden; }
+        #quiz-list-area { flex: 1; overflow-y: auto; background: #0d1117; border-radius: 8px; border: 1px solid #222; margin-top: 10px; }
+
+        .btn-ok { background: #16a34a !important; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 2rem !important; }
         .btn-ng { background: #4b5563 !important; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 1.2rem !important; }
-        .board-mgr-item { padding: 10px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        .board-mgr-item.is-correct { background: rgba(34, 197, 94, 0.2); border-left: 5px solid #22c55e; }
-        #remote-button { width: 180px; height: 180px; border-radius: 50%; font-size: 2rem; font-weight: bold; cursor: pointer; border: 8px solid #333; }
-        #remote-button:not(:disabled) { background: #7f1d1d; color: white; border-color: #991b1b; }
-        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; }
-        #admin-info-box { background:#111; padding:15px; border-radius:8px; border:1px solid #333; color: #fff; }
-        #admin-q-full { display: block; margin-top: 5px; padding: 10px; background: #000; color: #fff; border-radius: 6px; border: 1px solid #444; font-weight: bold; line-height: 1.4; white-space: pre-wrap; }
-        #admin-a-full { color: #ff5c5c; font-weight: bold; font-size: 1.3rem; }
-        input[type="text"], textarea { background: #0d1117; color: #fff; border: 1px solid #333; padding: 8px; border-radius: 4px; }
+        .mgr-item { display: flex; flex-direction: column; padding: 12px; border-bottom: 1px solid #222; gap: 5px; }
+        .stock-item { padding: 15px; border-bottom: 1px solid #333; cursor: pointer; transition: 0.2s; }
+        .stock-item:hover { background: #1f2937; }
+        
+        textarea#manual-q { width: 100%; height: 100px; font-size: 1.2rem; background: #0d1117; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; box-sizing: border-box; }
+        input#manual-a { width: 100%; font-size: 1.2rem; background: #0d1117; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -47,72 +51,56 @@
 <div id="admin-ui" class="page-section">
     <div class="admin-flex">
         <div class="main-panel">
-            <div class="container">
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <button onclick="openSubWindow()" style="background:#4c1d95; color:white; flex:1; padding:10px; border-radius:8px; border:none; cursor:pointer; font-weight:bold;">📺 視聴者画面を開く</button>
-                    <button onclick="db.ref('isGameSet').set(true)" style="background:var(--dark); color:white; padding:10px; border-radius:8px; border:none; cursor:pointer;">🏁 ゲームセット</button>
-                    <button onclick="resetAll()" style="background:var(--danger); color:white; padding:10px; border-radius:8px; border:none; cursor:pointer;">🚮 全消去</button>
-                </div>
-                <div style="background:#1e293b; padding:15px; border-radius:10px; text-align:center; border:2px solid #334155; margin-bottom:15px;">
-                    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:10px; color:#fff;">
-                        <span id="status-label" class="status-badge" style="background:#777;">待機中</span>
-                        <select id="gameMode" onchange="db.ref('mode').set(this.value)">
-                            <option value="push">⚡ 早押し</option>
-                            <option value="board">📝 ボード</option>
+            <div class="control-panel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="openSubWindow()" style="background:#4c1d95; color:white; padding:10px 20px; border-radius:8px; border:none; cursor:pointer; font-weight:bold;">📺 視聴者画面</button>
+                        <select id="gameMode" onchange="db.ref('mode').set(this.value)" style="padding:10px; border-radius:8px;">
                             <option value="all_board">👥 全員ボード</option>
+                            <option value="push">⚡ 早押し</option>
+                            <option value="board">📝 1人ボード</option>
                         </select>
-                        配点: <input type="number" id="currentPoint" value="1" style="width:40px;">
-                        <button onclick="toggleRanking()">🏆 スコア表示切替</button>
                     </div>
-                    <div id="activePlayer" style="font-size:2.2rem; font-weight:bold; color:var(--danger); min-height:1.2em;">待機中</div>
-                    <div id="boardResults" style="display:none; text-align:left; background:#111827; padding:10px; border-radius:8px; margin:10px 0; max-height:250px; overflow-y:auto; border:2px solid #334155;">
-                        <div id="board-list-inner"></div>
-                    </div>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <button class="btn-ok" style="flex:1.5; height:70px; font-size:2.5rem;" onclick="judge(true)">⭕ 正解</button>
-                        <button class="btn-ng" style="flex:1; height:70px;" onclick="judge(false)">⚠ 誤答(公開)</button>
-                    </div>
-                    <div style="margin-top:8px; display:flex; gap:5px;">
-                        <button onclick="resumeQuiz()" style="flex:1; padding:10px; font-weight:bold;">▶ 読上再開</button>
-                        <button onclick="revealAnswer()" style="flex:1; padding:10px; background:#4c1d95; color:white; border:none; border-radius:4px; font-weight:bold;">📢 答え公開</button>
+                    <div>
+                        配点: <input type="number" id="currentPoint" value="1" style="width:50px; padding:8px; border-radius:8px;">
                     </div>
                 </div>
-                <div style="display:flex; flex-wrap:wrap; gap:4px; background:#1f2937; padding:8px; border-radius:8px; margin-bottom:10px;">
-                    <button onclick="openType('kanji')">漢字</button><button onclick="openType('hira')">ひら</button><button onclick="openType('kana')">カナ</button>
-                    <button onclick="openType('num')">数字</button><button onclick="openType('alp')">英字</button><button onclick="openType('sym')">記号</button>
-                    <button onclick="openCircleOnly()">〇</button>
-                    <button onclick="openAll()" style="background:#555; color:white; border:none; margin-left:auto;">全表示</button>
+
+                <div id="display">待機中...</div>
+
+                <div style="display:flex; gap:10px;">
+                    <button onclick="startQuizFull()" style="flex:2; padding:20px; background:var(--primary); color:white; border:none; border-radius:10px; font-size:1.5rem; font-weight:bold; cursor:pointer;">📢 問題を表示（全員回答開始）</button>
+                    <button onclick="revealAnswer()" style="flex:1; padding:20px; background:#4c1d95; color:white; border:none; border-radius:10px; font-weight:bold;">答え公開</button>
                 </div>
-                <div id="display"></div>
-                <div id="admin-info-box">
-                    <span class="label-text">正解：</span> <span id="admin-a-full">-</span><br>
-                    <span class="label-text">全文：</span> <span id="admin-q-full">-</span>
+
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="btn-ok" style="flex:1.5; height:80px;" onclick="judge(true)">⭕ 正解</button>
+                    <button class="btn-ng" style="flex:1; height:80px;" onclick="judge(false)">⚠ 誤答（公開）</button>
                 </div>
-                <div style="display:flex; align-items:center; gap:10px; margin-top:10px; background:#1f2937; padding:12px; border-radius:8px;">
-                    <span>速度:</span> <input type="range" id="readSpeed" min="50" max="1000" value="150" step="10">
-                    <button onclick="startQuiz()" style="flex:1; padding:12px; background:#2563eb; color:white; border:none; border-radius:5px; font-weight:bold;">自動読上開始</button>
+            </div>
+
+            <div class="stock-area">
+                <h3 style="margin:0 0 10px 0;">✍️ 問題作成・ストック</h3>
+                <input type="text" id="manual-a" placeholder="答えを入力">
+                <textarea id="manual-q" placeholder="問題文を入力"></textarea>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button onclick="addStock()" style="flex:1; padding:15px; background:#374151; color:white; border:none; border-radius:8px; font-weight:bold;">ストックに追加</button>
+                    <button onclick="applyManual()" style="flex:1; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold;">即時出題</button>
                 </div>
+                <div id="quiz-list-area"></div>
             </div>
         </div>
+
         <div class="sidebar">
-            <div class="sidebar-section" style="height:35%">
-                <h3 style="margin:0 0 5px 0; font-size:0.9rem; color:var(--primary);">👤 プレイヤー (加減点・休みは手動)</h3>
-                <div id="full-mgr-list" style="flex:1;"></div>
+            <div class="sidebar-section" style="flex: 1.2;">
+                <h3 style="margin:0 0 10px 0; color:var(--primary);">👤 プレイヤー管理</h3>
+                <div id="full-mgr-list" style="overflow-y:auto; flex:1;"></div>
             </div>
-            <div class="sidebar-section" style="height:35%">
-                <h3 style="margin:0 0 5px 0; font-size:0.9rem; color:var(--success);">✍️ 問題作成 / ストック</h3>
-                <input type="text" id="manual-a" placeholder="答えを入力" style="margin-bottom:5px;">
-                <textarea id="manual-q" placeholder="問題文を入力" style="height:60px; margin-bottom:5px; font-family:sans-serif; resize:none;"></textarea>
-                <div style="display:flex; gap:5px;">
-                    <button onclick="addStock()" style="flex:1; background:#374151; color:white; border:none; padding:8px; border-radius:4px; cursor:pointer;">ストックへ</button>
-                    <button onclick="applyManual()" style="flex:1; background:var(--primary); color:white; border:none; padding:8px; border-radius:4px; cursor:pointer; font-weight:bold;">即時出題</button>
-                </div>
-                <div id="quiz-list-area" style="flex:1; margin-top:10px;"></div>
+            <div class="sidebar-section" style="flex: 0.8;">
+                <h3 style="margin:0 0 10px 0; color:var(--test);">📜 出題履歴</h3>
+                <div id="history-list" style="overflow-y:auto; flex:1;"></div>
             </div>
-            <div class="sidebar-section" style="flex:1">
-                <h3 style="margin:0 0 5px 0; font-size:0.9rem; color:var(--test);">📜 出題履歴</h3>
-                <div id="history-list" style="flex:1;"></div>
-            </div>
+            <button onclick="resetAll()" style="background:#555; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer;">🚮 全データリセット</button>
         </div>
     </div>
 </div>
@@ -127,17 +115,18 @@
         </div>
         <div id="locked-name-display" style="display:none; font-size:1.5rem; margin-bottom:20px; color:#aaa;">参加者: <strong id="current-player-name" style="color:#fff;"></strong></div>
         <div id="board-input-ui" style="display:none; margin-bottom:20px; background:#064e3b; padding:20px; border-radius:15px; border:2px solid var(--success);"><input type="text" id="board-text" placeholder="答えを入力" oninput="reportTyping(this.value)" style="width:90%; padding:15px; font-size:1.8rem; border-radius:10px; border:2px solid var(--success); background:#000; color:#fff;"><br><br><button onclick="sendBoardAns()" style="padding:15px 40px; background:var(--success); color:white; border:none; border-radius:10px; font-weight:bold; font-size:1.2rem;">回答送信</button></div>
-        <button id="remote-button" onclick="pushBtn()">PUSH!</button>
+        <button id="remote-button" style="width:180px; height:180px; border-radius:50%; font-size:2rem; font-weight:bold; cursor:pointer; border:8px solid #333;" onclick="pushBtn()">PUSH!</button>
     </div>
 </div>
 
 <script>
+    // --- Firebase設定 ---
     const firebaseConfig = { databaseURL: "https://realtime-database-c0015-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     
-    let stockData = [], historyList = [], currentQuiz = { q: "", a: "" }, revealed = [];
-    let timer = null, subWindow = null, lastStatus = "", isPlayerLocked = false;
+    let stockData = [], historyList = [], currentQuiz = { q: "", a: "" };
+    let subWindow = null, isPlayerLocked = false;
 
     const hEsc = (s) => { const e = document.createElement('div'); e.textContent = s; return e.innerHTML; };
     const safeName = (n) => n.replace(/[.#$/[\]]/g, "_");
@@ -150,47 +139,23 @@
             const scoreEntries = Object.entries(d.scores || {}).sort((a,b)=>b[1]-a[1]);
             document.getElementById('full-mgr-list').innerHTML = scoreEntries.map(([n,v]) => {
                 const w = d.waits?.[n] || 0;
-                return `<div class="mgr-item"><div style="display:flex;justify-content:space-between"><span><b>${hEsc(n)}</b>: ${v}pt</span><button onclick="removePlayer('${n}')">🗑️</button></div><div><button onclick="modifyScore('${n}',1)">+</button><button onclick="modifyScore('${n}',-1)">-</button> <span style="color:red">休${w}</span><button onclick="modifyWait('${n}',1)">+</button><button onclick="modifyWait('${n}',-1)">-</button></div></div>`;
+                return `<div class="mgr-item"><div style="display:flex;justify-content:space-between"><span><b>${hEsc(n)}</b>: ${v}pt (休${w})</span><button onclick="removePlayer('${n}')">🗑️</button></div><div><button onclick="modifyScore('${n}',1)">+1</button><button onclick="modifyScore('${n}',-1)">-1</button> | 休:<button onclick="modifyWait('${n}',1)">+</button><button onclick="modifyWait('${n}',-1)">-</button></div></div>`;
             }).join('');
             
-            const statusLabel = document.getElementById('status-label');
-            if(d.status === 'active') { statusLabel.innerText = "🟢 受付中"; statusLabel.style.background = "var(--success)"; }
-            else if(d.status === 'pushed') { statusLabel.innerText = "🔴 解答待ち"; statusLabel.style.background = "var(--danger)"; }
-            else { statusLabel.innerText = "⚪ 待機中"; statusLabel.style.background = "#777"; }
-            
-            document.getElementById('activePlayer').innerText = d.winner ? "🎤 " + d.winner : (d.mode === 'all_board' && d.status !== 'waiting' ? "🖊 全員解答中" : "待機中");
-            if(d.status === "pushed" && lastStatus !== "pushed") { clearInterval(timer); requestSound('push'); }
-            lastStatus = d.status;
-
-            const bArea = document.getElementById('boardResults');
-            if((d.mode === 'board' || d.mode === 'all_board') && d.boardAnswers) {
-                bArea.style.display = 'block';
-                document.getElementById('board-list-inner').innerHTML = Object.entries(d.boardAnswers).map(([n, ans]) => {
-                    const sn = safeName(n);
-                    const isCorrect = d.correctList?.[sn];
-                    let cls = "board-mgr-item" + (isCorrect ? " is-correct" : "");
-                    return `<div class="${cls}"><span><b>${hEsc(n)}</b>: ${hEsc(ans)}</span><div style="display:flex; gap:5px;"><button class="btn-ok" style="padding:5px 12px;" onclick="judge(true, '${n}')">〇</button><button class="btn-ng" style="padding:5px 12px;" onclick="judge(false, '${n}')">⚠ 公開</button></div></div>`;
-                }).join('');
-            } else bArea.style.display = 'none';
-
             if(subWindow) { 
                 subWindow.syncBoard(d); 
-                subWindow.toggleRank(d.rankVisible !== false); 
                 subWindow.updateRank(scoreEntries); 
-                if(d.isGameSet) subWindow.showResult(scoreEntries, historyList); 
-                else subWindow.hideResult(); 
             }
         });
     }
 
-    // 問題作成・管理
+    // 問題管理
     function addStock() {
         const q = document.getElementById('manual-q').value.trim();
         const a = document.getElementById('manual-a').value.trim();
         if(!q || !a) return alert("問題と答えを入力してください");
         stockData.push({q, a});
-        document.getElementById('manual-q').value = "";
-        document.getElementById('manual-a').value = "";
+        document.getElementById('manual-q').value = ""; document.getElementById('manual-a').value = "";
         renderStock();
     }
     function applyManual() {
@@ -198,17 +163,16 @@
         const a = document.getElementById('manual-a').value.trim();
         if(!q || !a) return alert("問題と答えを入力してください");
         applyQuiz(q, a);
-        document.getElementById('manual-q').value = "";
-        document.getElementById('manual-a').value = "";
+        document.getElementById('manual-q').value = ""; document.getElementById('manual-a').value = "";
     }
     function renderStock() {
         document.getElementById('quiz-list-area').innerHTML = stockData.map((i, idx) => `
-            <div class="mgr-item" style="cursor:pointer; border-bottom:1px solid #222;" onclick="applyQuizFromStock(${idx})">
+            <div class="stock-item" onclick="applyQuizFromStock(${idx})">
                 <div style="display:flex; justify-content:space-between">
-                    <strong>${hEsc(i.a)}</strong>
+                    <strong style="font-size:1.2rem; color:var(--success);">${hEsc(i.a)}</strong>
                     <button onclick="event.stopPropagation(); stockData.splice(${idx},1); renderStock();">🗑️</button>
                 </div>
-                <small style="color:#888;">${hEsc(i.q)}</small>
+                <div style="margin-top:5px; color:#ccc;">${hEsc(i.q)}</div>
             </div>
         `).join('');
     }
@@ -219,156 +183,99 @@
         renderStock();
     }
 
-    function removePlayer(n) { if(confirm(`${n} を削除しますか？`)) db.ref('scores/' + safeName(n)).remove(); }
+    function applyQuiz(q, a) { 
+        currentQuiz = { q, a }; 
+        document.getElementById('display').innerText = "【正解：" + a + "】\n" + q; 
+        if(!historyList.some(h => h.q === q)) { historyList.push({q, a}); renderHistory(); }
+        db.ref().update({ status: "waiting", winner: "", correctList: null, wrongList: null, boardAnswers: null, typing: null, finalReveal: false }); 
+        if(subWindow) subWindow.resetForNext(); 
+    }
+
+    function startQuizFull() {
+        db.ref('status').set('active');
+        requestSound('type');
+        const h = `<span>${hEsc(currentQuiz.q)}</span>`;
+        if(subWindow) subWindow.document.getElementById('text').innerHTML = h;
+    }
+
+    function judge(isOK) {
+        if(isOK) requestSound('correct');
+        db.ref().once('value', snap => {
+            const d = snap.val(); const p = d.winner || (d.mode === 'all_board' ? "" : null);
+            if(!p && d.mode !== 'all_board') return;
+            const sn = safeName(p);
+            if(isOK) { 
+                if(p) {
+                    const pt = parseInt(document.getElementById('currentPoint').value) || 1;
+                    db.ref('scores/'+sn).transaction(s => (s||0)+pt); 
+                    db.ref('correctList/'+sn).set(true); 
+                }
+            } else { 
+                if(p) db.ref('wrongList/'+sn).set(true); 
+            }
+            if(d.mode !== 'all_board') db.ref().update({ winner: "", status: "active" });
+        });
+    }
+
+    function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
     function modifyScore(n, v) { db.ref('scores/'+safeName(n)).transaction(s => (s||0)+v); }
     function modifyWait(n, v) { db.ref('waits/'+safeName(n)).transaction(w => Math.max(0, (w||0)+v)); }
-    function toggleRanking() { db.ref('rankVisible').transaction(v => v === undefined ? false : !v); }
+    function removePlayer(n) { if(confirm(`${n} を削除しますか？`)) db.ref('scores/' + safeName(n)).remove(); }
+    function renderHistory() { document.getElementById('history-list').innerHTML = historyList.slice().reverse().map(h => `<div class="mgr-item" onclick="applyQuiz('${hEsc(h.q.replace(/'/g,"\\'"))}', '${hEsc(h.a.replace(/'/g,"\\'"))}')" style="cursor:pointer;"><strong>${hEsc(h.a)}</strong><small>${hEsc(h.q)}</small></div>`).join(''); }
+    function resetAll() { if (confirm("すべてリセットしますか？")) db.ref().set({ status: "idle", mode: "all_board", rankVisible: true }); }
 
-    function renderHistory() {
-        document.getElementById('history-list').innerHTML = historyList.slice().reverse().map(h => `<div class="mgr-item" onclick="applyQuiz('${hEsc(h.q.replace(/'/g,"\\'"))}', '${hEsc(h.a.replace(/'/g,"\\'"))}')" style="cursor:pointer; border-bottom:1px solid #222; background: #1a1f29;"><strong>${hEsc(h.a)}</strong><small style="color:#888;">${hEsc(h.q)}</small></div>`).join('');
-    }
-
-    function applyQuiz(q, a) { 
-        clearInterval(timer); 
-        currentQuiz = { q, a }; revealed = []; 
-        if(!historyList.some(h => h.q === q)) { historyList.push({q, a}); renderHistory(); }
-        document.getElementById('admin-q-full').innerText = q; 
-        document.getElementById('admin-a-full').innerText = a; 
-        // 読み上げ開始時に自動的に休みを1減らす処理は維持（必要なければ削除可能）
-        db.ref('waits').once('value', snap => {
-            const waits = snap.val() || {};
-            const newWaits = {};
-            Object.keys(waits).forEach(k => { if(waits[k] > 0) newWaits[k] = waits[k] - 1; });
-            db.ref('waits').set(newWaits);
-        });
-        db.ref().update({ status: "waiting", winner: "", correctList: null, wrongList: null, boardAnswers: null, typing: null, finalReveal: false, isGameSet: false }); 
-        if(subWindow) subWindow.resetForNext(); 
-        sync(true);
-    }
-    
-    function startQuiz() { db.ref('status').set('active'); const speed = parseInt(document.getElementById('readSpeed').value); clearInterval(timer); timer = setInterval(() => { if(revealed.length < currentQuiz.q.length) { let n = 0; while(revealed.includes(n)) n++; revealed.push(n); sync(); } else clearInterval(timer); }, speed); }
-    function sync(forceHideSub = false) { const h = Array.from(currentQuiz.q).map((c, i) => revealed.includes(i) ? `<span>${hEsc(c)}</span>` : `<span class="hidden">${hEsc(c)}</span>`).join(''); document.getElementById('display').innerHTML = h; if(subWindow && !forceHideSub) subWindow.document.getElementById('text').innerHTML = h; }
-    
-    function openType(t) {
-        db.ref('status').set('active');
-        const m = { kanji:/[\u4E00-\u9FFF]/, hira:/[\u3040-\u309F]/, kana:/[\u30A0-\u30FF]/, num:/[0-9０-９]/, alp:/[a-zA-Zａ-ｚＡ-Ｚ]/, sym:/[ ！・？、。：；／＿－＝＋＊＆％＄＃＠！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～「」『』【】（）ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ★☆]/ };
-        let count = 0; Array.from(currentQuiz.q).forEach((c, i) => { if (m[t] && m[t].test(c) && !revealed.includes(i)) { revealed.push(i); count++; } });
-        if (count > 0) { requestSound('type'); sync(); }
-    }
-    function openCircleOnly() { let count = 0; Array.from(currentQuiz.q).forEach((c, i) => { if ((c === '〇' || c === '○') && !revealed.includes(i)) { revealed.push(i); count++; } }); if(count > 0) { requestSound('type'); sync(); } }
-    function openAll() { revealed = Array.from(currentQuiz.q).map((_, i) => i); sync(); }
-
-    function judge(isOK, targetPlayer = null) {
-        if(isOK) requestSound('correct'); 
-        // 誤答時のサウンド再生はなし
-        db.ref().once('value', snap => {
-            const d = snap.val(); const p = targetPlayer || d.winner; if(!p) return;
-            const sn = safeName(p); const pt = parseInt(document.getElementById('currentPoint').value) || 1;
-            
-            if(isOK) { 
-                db.ref('scores/'+sn).transaction(s => (s||0)+pt); 
-                db.ref('correctList/'+sn).set(true); 
-            } else { 
-                // 誤答時は状態記録(wrongList)のみ行い、公開フラグを立てる
-                db.ref('wrongList/'+sn).set(true); 
-                // 自動減点・休み付与のコードを削除しました
-            }
-            if(d.mode !== 'all_board' && !targetPlayer) { db.ref().update({ winner: "", status: "active" }); }
-        });
-    }
-
-    function resumeQuiz() { db.ref('status').set('active'); if(revealed.length < currentQuiz.q.length) startQuiz(); }
-    function revealAnswer() { db.ref('finalReveal').set(true); if(subWindow) subWindow.reveal(currentQuiz.a, currentQuiz.q); }
-    function resetAll() { if (confirm("すべて消去しますか？")) { db.ref().set({ status: "idle", mode: "push", rankVisible: true, isGameSet: false, usedSet: [] }); historyList = []; stockData = []; renderStock(); renderHistory(); } }
-
-    function lockName() { const n = document.getElementById('p-name').value.trim(); if(!n) return alert("名前！"); isPlayerLocked = true; document.getElementById('p-name').disabled = true; document.getElementById('p-lock-btn').style.display = 'none'; document.getElementById('locked-name-display').style.display = 'block'; document.getElementById('current-player-name').innerText = n; }
+    // --- Player Logic ---
+    function lockName() { const n = document.getElementById('p-name').value.trim(); if(!n) return; isPlayerLocked = true; document.getElementById('p-name').disabled = true; document.getElementById('p-lock-btn').style.display = 'none'; document.getElementById('locked-name-display').style.display = 'block'; document.getElementById('current-player-name').innerText = n; }
     function initPlayer() { 
-        const bUI = document.getElementById('board-input-ui'), sArea = document.getElementById('player-status-area'); 
         db.ref().on('value', snap => { 
             if(!isPlayerLocked) return; 
-            const d = snap.val() || {}; const name = document.getElementById('p-name').value.trim(); const sn = safeName(name); const score = d.scores?.[sn] || 0; 
-            document.getElementById('p-score').innerText = score; 
-            const w = (d.waits && d.waits[sn]) || 0; const isCorrected = d.correctList && d.correctList[sn]; const isWinner = (d.winner === name); 
+            const d = snap.val() || {}; const name = document.getElementById('p-name').value.trim(); const sn = safeName(name);
+            document.getElementById('p-score').innerText = d.scores?.[sn] || 0; 
+            const w = (d.waits && d.waits[sn]) || 0; const isWinner = (d.winner === name);
             const showBoard = (d.mode === 'all_board' && d.status !== 'waiting') || (isWinner && (d.mode === 'board' || d.mode === 'all_board')); 
-            bUI.style.display = showBoard ? 'block' : 'none'; 
-            if(isCorrected) sArea.innerHTML = "✅ 正解！"; else if(isWinner) sArea.innerHTML = "🎤 解答権！"; else if(w > 0) sArea.innerHTML = "❌ お休み (" + w + ")"; else sArea.innerHTML = d.status === 'active' ? "受付中" : "待機中"; 
-            document.getElementById('remote-button').disabled = !(w === 0 && d.status === 'active' && !d.winner && !isCorrected && d.mode !== 'all_board'); 
+            document.getElementById('board-input-ui').style.display = showBoard ? 'block' : 'none'; 
+            document.getElementById('remote-button').disabled = !(w === 0 && d.status === 'active' && !d.winner && d.mode !== 'all_board');
         }); 
     }
     function reportTyping(val) { const name = safeName(document.getElementById('p-name').value.trim()); if(isPlayerLocked) db.ref('typing/'+name).set(val.length > 0); }
     function sendBoardAns() { const name = safeName(document.getElementById('p-name').value.trim()), t = document.getElementById('board-text').value.trim(); if(name && t) { db.ref('boardAnswers/'+name).set(t); db.ref('typing/'+name).set(false); document.getElementById('board-text').value=""; } }
-    function pushBtn() { const name = document.getElementById('p-name').value.trim(); if(!isPlayerLocked) return; db.ref('winner').transaction(c => c ? undefined : name, (err, ok) => { if(ok) db.ref('status').set('pushed'); }); }
+    function pushBtn() { const name = document.getElementById('p-name').value.trim(); if(isPlayerLocked) db.ref('winner').transaction(c => c ? undefined : name, (err, ok) => { if(ok) { db.ref('status').set('pushed'); requestSound('push'); } }); }
 
+    // --- Sub Window ---
     function openSubWindow() {
         subWindow = window.open("", "QuizSub", "width=1200,height=800");
         subWindow.document.write(`<html><head><style>
-            body{background:#000;color:#fff;font-family:sans-serif;margin:0;overflow:hidden;display:flex;}
-            #main-container{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px;transition: width 0.3s;}
-            #rank-side{width:280px;background:#111;border-left:3px solid #333;padding:20px;transition: transform 0.3s, width 0.3s;}
-            #rank-side.hidden{transform: translateX(100%); width:0; padding:0; border:none;}
-            #text{font-size:3.5rem;text-align:center;font-weight:bold;line-height:1.3;white-space:pre-wrap;width:100%;}
-            #text span.hidden{visibility:hidden;}
-            #ans{display:none;font-size:4.5rem;color:#f1c40f;border:10px solid #f1c40f;padding:20px;margin-top:25px;border-radius:20px;font-weight:bold;}
-            #board-area{display:flex;flex-wrap:wrap;justify-content:center;margin-top:25px;gap:20px;width:100%;}
-            .board-box { background:#222; padding:25px; border-radius:15px; min-width:220px; text-align:center; border:5px solid #555;}
-            .board-box.correct { border-color: #2ecc71; background: #041; }
-            #result-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.98); z-index:100; flex-direction:row; padding:40px; box-sizing:border-box;}
-            .res-col { flex:1; display:flex; flex-direction:column; align-items:center; }
-            .hist-col { flex:1.5; background:rgba(255,255,255,0.05); border-radius:15px; padding:20px; overflow-y:auto; max-height:90vh; border:1px solid #444; }
-            .result-item { font-size:2.2rem; margin:10px; font-weight:bold; }
-            .hist-item { border-bottom:1px solid #333; padding:10px 0; font-size:1.1rem; width:100%; }
-            .hist-q { color:#ccc; margin-bottom:4px; font-size:0.9rem; }
-            .hist-a { color:#f1c40f; font-weight:bold; font-size:1.2rem; }
-            @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+            body{background:#000;color:#fff;font-family:sans-serif;margin:0;display:flex;overflow:hidden;}
+            #main{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px;}
+            #rank-side{width:300px;background:#111;border-left:2px solid #333;padding:20px;}
+            #text{font-size:3.5rem;font-weight:bold;text-align:center;line-height:1.4;}
+            #ans{display:none;font-size:5rem;color:#f1c40f;border:10px solid #f1c40f;padding:20px;margin-top:30px;border-radius:20px;}
+            #board-area{display:flex;flex-wrap:wrap;justify-content:center;gap:20px;margin-top:30px;width:100%;}
+            .board-box{background:#222;padding:20px;border-radius:15px;min-width:200px;text-align:center;border:4px solid #444;}
+            .board-box.correct{border-color:#2ecc71;background:#041;}
+            @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.4;}}
         </style></head><body>
-            <div id="main-container"><div id="text"></div><div id="ans"></div><div id="board-area"></div></div>
-            <div id="rank-side"><h2>RANKING</h2><div id="rank-list"></div></div>
-            <div id="result-overlay">
-                <div class="res-col">
-                    <h1 style="color:#f1c40f; font-size:3rem;">🏆 FINAL RANKING 🏆</h1>
-                    <div id="result-list" style="width:100%; text-align:center;"></div>
-                </div>
-                <div class="hist-col">
-                    <h2 style="border-bottom:2px solid #f1c40f; padding-bottom:10px;">📜 QUIZ HISTORY</h2>
-                    <div id="history-list-view"></div>
-                </div>
-            </div>
+            <div id="main"><div id="text"></div><div id="ans"></div><div id="board-area"></div></div>
+            <div id="rank-side"><h3>RANKING</h3><div id="rank-list"></div></div>
             <script>
                 const sounds = { push: new Audio('sounds/push.mp3'), correct: new Audio('sounds/correct.mp3'), type: new Audio('sounds/type.mp3') };
-                const safeName = (n) => n.replace(/[.#$/[\\\]]/g, \"_\");
-                window.play = (s) => { if(sounds[s]) { sounds[s].currentTime = 0; sounds[s].play().catch(e => 0); } };
-                window.reveal = (a,q) => { document.getElementById('ans').innerText=a; document.getElementById('ans').style.display='block'; document.getElementById('text').innerHTML=q; };
-                window.toggleRank = (v) => { 
-                    const rs = document.getElementById('rank-side');
-                    if(v) rs.classList.remove('hidden'); else rs.classList.add('hidden');
-                };
-                window.updateRank = (list) => { document.getElementById('rank-list').innerHTML = list.map(([n,v]) => '<div style=\"display:flex;justify-content:space-between;font-size:1.6rem;padding:8px 0;border-bottom:1px solid #333;\"><span>'+n+'</span><span>'+v+'pt</span></div>').join(''); };
-                window.showResult = (scoreList, history) => { 
-                    const over = document.getElementById('result-overlay');
-                    over.style.display = 'flex';
-                    document.getElementById('result-list').innerHTML = scoreList.map(([n,v], i) => '<div class=\"result-item\" style=\"color:'+(i===0?'#f1c40f':'#fff')+'\">' + (i+1) + '位: ' + n + ' (' + v + 'pt)</div>').join('');
-                    document.getElementById('history-list-view').innerHTML = history.map((h, i) => \`
-                        <div class=\"hist-item\">
-                            <div class=\"hist-q\">Q\${i+1}: \${h.q}</div>
-                            <div class=\"hist-a\">A: \${h.a}</div>
-                        </div>
-                    \`).reverse().join('');
-                };
-                window.hideResult = () => { document.getElementById('result-overlay').style.display = 'none'; };
+                window.play = (s) => { if(sounds[s]) { sounds[s].currentTime = 0; sounds[s].play().catch(e=>0); } };
+                window.reveal = (a,q) => { document.getElementById('ans').innerText=a; document.getElementById('ans').style.display='block'; document.getElementById('text').innerText=q; };
+                window.resetForNext = () => { document.getElementById('ans').style.display='none'; document.getElementById('text').innerText=''; document.getElementById('board-area').innerHTML=''; };
+                window.updateRank = (list) => { document.getElementById('rank-list').innerHTML = list.map(([n,v])=>'<div style="font-size:1.5rem;padding:5px 0;border-bottom:1px solid #333;">'+n+': '+v+'pt</div>').join(''); };
                 window.syncBoard = (d) => {
                     const area = document.getElementById('board-area');
                     const players = Array.from(new Set([...Object.keys(d.boardAnswers || {}), ...Object.keys(d.typing || {})]));
                     area.innerHTML = players.map(n => {
-                        const sn = safeName(n);
                         const ans = d.boardAnswers?.[n]; const isTyping = d.typing?.[n];
-                        const isCorrect = d.correctList?.[sn], isWrong = d.wrongList?.[sn];
+                        const isCorrect = d.correctList?.[n.replace(/[.#$/[\\\]]/g, "_")];
+                        const isWrong = d.wrongList?.[n.replace(/[.#$/[\\\]]/g, "_")];
                         const show = d.finalReveal || isWrong;
-                        let content = show ? (ans || \"\") : (ans ? \"？？？\" : (isTyping ? \"<span style='color:#3498db;animation:blink 1s infinite'>🖊 入力中...</span>\" : \"\"));
-                        if(!content && !isTyping) return \"\";
-                        return '<div class=\"board-box '+(isCorrect?'correct':'')+'\"><small>'+n+'</small><div style=\"font-size:2.2rem;font-weight:bold;color:#f1c40f;min-height:1.2em;\">'+content+'</div></div>';
+                        let content = show ? (ans || "") : (ans ? "？？？" : (isTyping ? "<span style='color:#3498db;animation:blink 1s infinite'>🖊...</span>" : ""));
+                        if(!content && !isTyping) return "";
+                        return '<div class="board-box '+(isCorrect?'correct':'')+'"><small>'+n+'</small><div style="font-size:2.5rem;font-weight:bold;color:#f1c40f;">'+content+'</div></div>';
                     }).join('');
                 };
-                window.resetForNext = () => { document.getElementById('ans').style.display='none'; document.getElementById('board-area').innerHTML=''; document.getElementById('text').innerHTML=''; };
             <\/script></body></html>`);
     }
 </script>
